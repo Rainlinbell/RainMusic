@@ -1,0 +1,27 @@
+# SDK 目录
+android-sdk/
+
+# Android 构建产物
+.gradle/
+**/build/
+**/.idea/
+**/*.iml
+**/local.properties
+
+# HarmonyOS 构建产物
+.hvigor/
+**/build/
+
+# iOS 构建产物
+*.xcworkspace
+xcuserdata/
+DerivedData/
+.swiftpm/
+*.xcodeproj/project.xcworkspace/xcshareddata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# 通用
+.DS_Store
+*.log
+*.tmp
+Thumbs.db
