@@ -43,6 +43,14 @@
           "abilities": ["EntryAbility"],
           "when": "inuse"
         }
+      },
+      {
+        "name": "ohos.permission.READ_IMAGEVIDEO",
+        "reason": "$string:photo_permission_reason",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "inuse"
+        }
       }
     ]
   }

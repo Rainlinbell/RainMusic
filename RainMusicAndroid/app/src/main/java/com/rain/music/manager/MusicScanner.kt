@@ -76,7 +76,12 @@ class MusicScanner(private val context: Context, private val songDao: SongDao) {
                 val duration = cursor.getLong(durationColumn)
                 val data = cursor.getString(dataColumn)
 
-                if (duration > 10000) { // 跳过小于10秒的音频
+                if (duration > 10000) {
+                    val fileUri = data ?: ContentUris.withAppendedId(collection, id).toString()
+                    // 去重：检查是否已存在相同文件路径
+                    val existing = songDao.getSongByFilePath(fileUri)
+                    if (existing != null) continue
+
                     val contentUri = ContentUris.withAppendedId(collection, id)
                     val albumArtUri = getAlbumArtUri(id)
 
@@ -85,7 +90,7 @@ class MusicScanner(private val context: Context, private val songDao: SongDao) {
                         artist = artist,
                         album = album,
                         duration = duration,
-                        fileUri = data ?: contentUri.toString(),
+                        fileUri = fileUri,
                         albumArtUri = albumArtUri,
                         sourceType = "library"
                     )
@@ -130,6 +135,12 @@ class MusicScanner(private val context: Context, private val songDao: SongDao) {
                 }
             }
 
+            val resolvedPath = filePath.ifEmpty { uri.toString() }
+
+            // 去重：检查是否已存在相同文件路径
+            val existing = songDao.getSongByFilePath(resolvedPath)
+            if (existing != null) return@withContext null
+
             // 查找同名歌词文件
             val lyricsPath = findLyricsFile(filePath)
 
@@ -138,7 +149,7 @@ class MusicScanner(private val context: Context, private val songDao: SongDao) {
                 artist = artist,
                 album = album,
                 duration = duration,
-                fileUri = filePath.ifEmpty { uri.toString() },
+                fileUri = resolvedPath,
                 hasLyrics = lyricsPath != null,
                 lyricsFilePath = lyricsPath,
                 sourceType = "imported"

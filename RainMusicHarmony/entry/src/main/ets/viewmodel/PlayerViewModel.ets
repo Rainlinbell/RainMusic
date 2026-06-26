@@ -88,12 +88,15 @@ export class PlayerViewModel {
     return AudioPlayerManager.formatTime(ms)
   }
 
-  // 扫描
+  // 扫描（支持去重合并）
   async scanMusic() {
     this.isScanning = true
     const result = await this.musicScanner.scanDeviceMusic()
-    this.songs = result
-    this.scanResult = `扫描完成，找到 ${result.length} 首歌曲`
+    // 去重：与现有歌曲列表按 fileUri 合并
+    const existingUris = new Set(this.songs.map(s => s.fileUri))
+    const newSongs = result.filter(s => !existingUris.has(s.fileUri))
+    this.songs = [...this.songs, ...newSongs]
+    this.scanResult = `扫描完成，新增 ${newSongs.length} 首歌曲（跳过 ${result.length - newSongs.length} 首重复）`
     this.isScanning = false
   }
 
@@ -115,5 +118,14 @@ export class PlayerViewModel {
   // 删除
   deleteSong(song: Song) {
     this.songs = this.songs.filter(s => s.id !== song.id)
+  }
+
+  // 更新封面
+  updateAlbumArt(uri: string) {
+    const song = this.currentSong
+    if (song) {
+      song.albumArtUri = uri
+      this.stateVersion++
+    }
   }
 }

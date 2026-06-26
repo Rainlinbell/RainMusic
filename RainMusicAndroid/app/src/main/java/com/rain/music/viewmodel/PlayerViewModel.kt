@@ -139,6 +139,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // 更新封面
+    fun updateAlbumArt(songId: Long, newArtUri: String) {
+        viewModelScope.launch {
+            val song = songDao.getSongById(songId)
+            if (song != null) {
+                // 删除旧封面文件
+                song.albumArtUri?.let { oldUri ->
+                    try { java.io.File(oldUri).delete() } catch (_: Exception) {}
+                }
+                songDao.update(song.copy(albumArtUri = newArtUri))
+            }
+        }
+    }
+
     // 格式化时间
     fun formatTime(ms: Long): String {
         val totalSeconds = ms / 1000

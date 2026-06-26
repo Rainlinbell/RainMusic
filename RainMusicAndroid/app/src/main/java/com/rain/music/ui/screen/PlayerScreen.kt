@@ -1,12 +1,17 @@
 package com.rain.music.ui.screen
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -15,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -25,8 +31,9 @@ import com.rain.music.manager.RepeatMode
 import com.rain.music.manager.ShuffleMode
 import com.rain.music.viewmodel.PlayerViewModel
 import kotlinx.coroutines.delay
+import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel,
@@ -42,6 +49,21 @@ fun PlayerScreen(
     val currentLyricIndex by viewModel.currentLyricIndex.collectAsState()
     val showLyrics by viewModel.showLyrics.collectAsState()
     val systemVolume by viewModel.systemVolume.collectAsState()
+    val context = LocalContext.current
+
+    // 图片选择器
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { selectedUri ->
+            val song = currentSong ?: return@let
+            val destFile = File(context.filesDir, "albumArt_${song.id}_${System.currentTimeMillis()}.jpg")
+            context.contentResolver.openInputStream(selectedUri)?.use { input ->
+                destFile.outputStream().use { output -> input.copyTo(output) }
+            }
+            viewModel.updateAlbumArt(song.id, destFile.absolutePath)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -73,19 +95,36 @@ fun PlayerScreen(
                     modifier = Modifier.height(320.dp)
                 )
             } else {
-                // 专辑封面
+                // 专辑封面（长按更换封面）
                 if (currentSong?.albumArtUri != null) {
                     AsyncImage(
                         model = currentSong?.albumArtUri,
                         contentDescription = null,
                         modifier = Modifier
                             .size(280.dp)
-                            .clip(MaterialTheme.shapes.large),
+                            .clip(MaterialTheme.shapes.large)
+                            .combinedClickable(
+                                onClick = { },
+                                onLongClick = {
+                                    imagePicker.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }
+                            ),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Surface(
-                        modifier = Modifier.size(280.dp),
+                        modifier = Modifier
+                            .size(280.dp)
+                            .combinedClickable(
+                                onClick = { },
+                                onLongClick = {
+                                    imagePicker.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }
+                            ),
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.primaryContainer
                     ) {
@@ -97,6 +136,13 @@ fun PlayerScreen(
                         )
                     }
                 }
+
+                // 更换封面提示
+                Text(
+                    "长按封面可更换图片",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))

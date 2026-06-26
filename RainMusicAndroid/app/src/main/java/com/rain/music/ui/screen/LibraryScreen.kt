@@ -32,7 +32,16 @@ fun LibraryScreen(
     val sortOrder by viewModel.sortOrder.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     var showSortMenu by remember { mutableStateOf(false) }
+    var isSearchActive by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // 搜索栏关闭时清除搜索状态
+    LaunchedEffect(isSearchActive) {
+        if (!isSearchActive) {
+            searchQuery = ""
+            viewModel.setSearchQuery("")
+        }
+    }
 
     LaunchedEffect(scanResult) {
         scanResult?.let {
@@ -45,6 +54,14 @@ fun LibraryScreen(
             TopAppBar(
                 title = { Text("音乐库") },
                 actions = {
+                    // 搜索按钮
+                    IconButton(onClick = { isSearchActive = !isSearchActive }) {
+                        Icon(
+                            if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
+                            contentDescription = "搜索"
+                        )
+                    }
+
                     // 排序菜单
                     Box {
                         IconButton(onClick = { showSortMenu = true }) {
@@ -76,11 +93,6 @@ fun LibraryScreen(
                         }
                     }
 
-                    // 扫描按钮
-                    IconButton(onClick = { viewModel.scanMusic() }) {
-                        Icon(Icons.Default.Search, contentDescription = "扫描音乐库")
-                    }
-
                     // 导入按钮
                     IconButton(onClick = onNavigateToImport) {
                         Icon(Icons.Default.Add, contentDescription = "导入文件")
@@ -91,7 +103,35 @@ fun LibraryScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
-            if (songs.isEmpty()) {
+            Column {
+                // 搜索栏
+                if (isSearchActive) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = {
+                            searchQuery = it
+                            viewModel.setSearchQuery(it)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        placeholder = { Text("搜索歌曲、艺术家、专辑") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = {
+                                    searchQuery = ""
+                                    viewModel.setSearchQuery("")
+                                }) {
+                                    Icon(Icons.Default.Clear, contentDescription = "清除")
+                                }
+                            }
+                        },
+                        singleLine = true
+                    )
+                }
+
+                if (songs.isEmpty() && !isSearchActive) {
                 // 空状态
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -145,6 +185,7 @@ fun LibraryScreen(
                     }
                 }
             }
+            } // Column end
 
             // 扫描中遮罩
             if (isScanning) {

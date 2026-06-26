@@ -3,6 +3,7 @@ import { audio } from '@kit.AudioKit'
 import { Song, ShuffleMode, RepeatMode, LyricLine } from '../model/SongModel'
 import { LyricsParser } from './LyricsParser'
 import { common } from '@kit.AbilityKit'
+import avSession from '@ohos.multimedia.avsession'
 
 /**
  * 音频播放管理器 - 使用 AVPlayer 实现无极音量控制
@@ -14,6 +15,7 @@ export class AudioPlayerManager {
   private progressTimer: number = -1
   private volumeCheckerTimer: number = -1
   private lastSystemVolume: number = 1.0
+  private avSession: avSession.AVSession | null = null
 
   // 播放状态
   currentSong: Song | null = null
@@ -37,6 +39,7 @@ export class AudioPlayerManager {
     this.context = context
     this.initPlayer()
     this.initVolume()
+    this.initAVSession()
   }
 
   static getInstance(context?: common.UIAbilityContext): AudioPlayerManager {
@@ -125,15 +128,18 @@ export class AudioPlayerManager {
         case 'prepared':
           this.duration = this.player?.duration ?? 0
           this.player?.play()
+          this.updateAVPlaybackState()
           break
         case 'playing':
           this.isPlaying = true
           this.startProgressTimer()
+          this.updateAVPlaybackState()
           this.notifyChange()
           break
         case 'paused':
           this.isPlaying = false
           this.stopProgressTimer()
+          this.updateAVPlaybackState()
           this.notifyChange()
           break
         case 'completed':
@@ -145,6 +151,7 @@ export class AudioPlayerManager {
           this.isPlaying = false
           this.currentTime = 0
           this.stopProgressTimer()
+          this.updateAVPlaybackState()
           this.notifyChange()
           break
       }
@@ -162,6 +169,60 @@ export class AudioPlayerManager {
     })
   }
 
+  // MARK: - AVSession 通知栏控制
+
+  private async initAVSession() {
+    try {
+      this.avSession = await avSession.createAVSession(this.context, 'RainMusic', 'audio')
+      // 注册远程控制命令回调
+      this.avSession.on('play', () => {
+        if (!this.isPlaying) this.togglePlayPause()
+      })
+      this.avSession.on('pause', () => {
+        if (this.isPlaying) this.togglePlayPause()
+      })
+      this.avSession.on('playNext', () => {
+        this.playNext()
+      })
+      this.avSession.on('playPrevious', () => {
+        this.playPrevious()
+      })
+      this.avSession.on('seek', (time: number) => {
+        this.seekTo(time)
+      })
+    } catch (e) {
+      console.error('初始化 AVSession 失败: ' + JSON.stringify(e))
+    }
+  }
+
+  private updateAVMetadata() {
+    if (!this.avSession || !this.currentSong) return
+    const metadata: avSession.AVMetadata = {
+      assetId: this.currentSong.id.toString(),
+      title: this.currentSong.title,
+      artist: this.currentSong.artist,
+      album: this.currentSong.album,
+      duration: this.currentSong.duration,
+      mediaImage: this.currentSong.albumArtUri ?? ''
+    }
+    this.avSession.setAVMetadata(metadata)
+  }
+
+  private updateAVPlaybackState() {
+    if (!this.avSession) return
+    const playbackState: avSession.AVPlaybackState = {
+      state: this.isPlaying
+        ? avSession.PlaybackState.PLAYBACK_STATE_PLAY
+        : avSession.PlaybackState.PLAYBACK_STATE_PAUSE,
+      speed: 1.0,
+      position: {
+        elapsedTime: this.currentTime,
+        updateTime: Date.now()
+      }
+    }
+    this.avSession.setAVPlaybackState(playbackState)
+  }
+
   // MARK: - 播放控制
 
   async play(song: Song) {
@@ -176,6 +237,9 @@ export class AudioPlayerManager {
 
       this.currentSong = song
       this.currentIndex = this.playlist.findIndex(s => s.id === song.id)
+
+      // 更新通知栏元数据
+      this.updateAVMetadata()
 
       // 加载歌词（优先关联歌词文件，回退同名 .lrc）
       this.lyrics = LyricsParser.loadLyrics(song.lyricsPath, song.fileUri) ?? []
@@ -217,11 +281,7 @@ export class AudioPlayerManager {
     } else if (this.repeatMode === RepeatMode.ALL) {
       nextIndex = (this.currentIndex + 1) % this.playlist.length
     } else {
-      nextIndex = this.currentIndex + 1
-      if (nextIndex >= this.playlist.length) {
-        this.stop()
-        return
-      }
+      nextIndex = (this.currentIndex + 1) % this.playlist.length
     }
 
     if (nextIndex >= 0 && nextIndex < this.playlist.length) {

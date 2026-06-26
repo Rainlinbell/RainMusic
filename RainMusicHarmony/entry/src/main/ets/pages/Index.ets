@@ -38,15 +38,6 @@ struct Index {
           .backgroundColor(Color.Transparent)
           .onClick(() => { this.cycleSortOrder() })
 
-          // 扫描按钮
-          Button() {
-            Text('🔍')
-              .fontSize(18)
-          }
-          .type(ButtonType.Circle)
-          .backgroundColor(Color.Transparent)
-          .onClick(() => { this.doScan() })
-
           // 导入按钮
           Button() {
             Text('+')

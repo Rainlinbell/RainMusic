@@ -21,6 +21,7 @@
     { "name": "repeat", "value": "循环" },
     { "name": "play", "value": "播放" },
     { "name": "pause", "value": "暂停" },
-    { "name": "delete", "value": "删除" }
+    { "name": "delete", "value": "删除" },
+    { "name": "photo_permission_reason", "value": "选择图片作为歌曲封面" }
   ]
 }

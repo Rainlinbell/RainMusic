@@ -1,10 +1,13 @@
 import SwiftUI
+import PhotosUI
 
 struct PlayerView: View {
     @Binding var showPlayerSheet: Bool
     @State private var viewModel = PlayerViewModel()
     @State private var isSeeking = false
     @State private var seekTime: Double = 0
+    @State private var showPhotosPicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
     private let audioManager = AudioPlayerManager.shared
 
@@ -41,6 +44,18 @@ struct PlayerView: View {
                                 viewModel.toggleLyrics()
                             }
                         }
+                        .onLongPressGesture {
+                            showPhotosPicker = true
+                        }
+                        .photosPicker(isPresented: $showPhotosPicker, selection: $selectedPhotoItem, matching: .images)
+                        .onChange(of: selectedPhotoItem) { _, newItem in
+                            Task {
+                                if let newItem, let data = try? await newItem.loadTransferable(type: Data.self) {
+                                    viewModel.updateAlbumArt(data: data)
+                                }
+                                selectedPhotoItem = nil
+                            }
+                        }
                     }
 
                     // 切换提示
@@ -53,6 +68,10 @@ struct PlayerView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+
+                    Text("长按封面可更换图片")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
 
                     // 歌曲信息
                     VStack(spacing: 4) {

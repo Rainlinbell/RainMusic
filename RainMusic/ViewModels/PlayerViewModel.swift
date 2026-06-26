@@ -99,6 +99,10 @@ final class PlayerViewModel {
         showLyrics.toggle()
     }
 
+    func updateAlbumArt(data: Data) {
+        audioManager.currentSong?.albumArtData = data
+    }
+
     // MARK: - Update
 
     func update() {

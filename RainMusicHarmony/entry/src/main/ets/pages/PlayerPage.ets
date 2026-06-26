@@ -3,6 +3,8 @@ import { AlbumArt } from '../components/AlbumArt'
 import { LyricsView } from '../components/LyricsView'
 import { ShuffleMode, RepeatMode } from '../model/SongModel'
 import { router } from '@kit.ArkUI'
+import { picker, fileIo } from '@kit.CoreFileKit'
+import { abilityAccessCtrl, Permissions } from '@kit.AbilityKit'
 
 /**
  * 播放器页面 - 完整播放控制
@@ -67,6 +69,11 @@ struct PlayerPage {
                 this.showLyrics = true
               })
             })
+            .gesture(
+              LongPressGesture().onAction(() => {
+                this.pickAlbumArt()
+              })
+            )
           }
 
           // 切换提示
@@ -240,5 +247,67 @@ struct PlayerPage {
     .width('100%')
     .height('100%')
     .backgroundColor('#FFFBFE')
+  }
+
+  /**
+   * 检查并请求照片访问权限
+   */
+  private async requestPhotoPermission(): Promise<boolean> {
+    try {
+      const atManager = abilityAccessCtrl.createAtManager()
+      const context = getContext(this)
+      const permission: Permissions = 'ohos.permission.READ_IMAGEVIDEO'
+      const grantStatus = await atManager.checkAccessToken(context.applicationInfo.accessTokenId, permission)
+      if (grantStatus === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+        return true
+      }
+      // 请求权限
+      const result = await atManager.requestPermissionsFromUser(context, [permission])
+      return result.authResults[0] === 0
+    } catch (e) {
+      console.error('权限请求失败: ' + JSON.stringify(e))
+      return false
+    }
+  }
+
+  /**
+   * 选择并更新封面图片
+   */
+  private async pickAlbumArt() {
+    // 先检查权限
+    const hasPermission = await this.requestPhotoPermission()
+    if (!hasPermission) {
+      console.error('未获得照片访问权限')
+      return
+    }
+    try {
+      const photoPicker = new picker.PhotoViewPicker()
+      const result = await photoPicker.select({
+        MIMEType: picker.PhotoViewMIMETypes.IMAGE_TYPE,
+        maxSelectNumber: 1
+      })
+      if (result.photoUris && result.photoUris.length > 0) {
+        const selectedUri = result.photoUris[0]
+        // 复制到应用沙盒
+        const destDir = getContext(this).filesDir + '/albumArt'
+        if (!fileIo.accessSync(destDir)) {
+          fileIo.mkdirSync(destDir, true)
+        }
+        const songId = this.viewModel.currentSong?.id ?? 0
+        const destPath = destDir + '/art_' + songId + '_' + Date.now() + '.jpg'
+        const srcFile = fileIo.openSync(selectedUri, fileIo.OpenMode.READ_ONLY)
+        const destFile = fileIo.openSync(destPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY)
+        const buffer = new ArrayBuffer(1024 * 64)
+        let readLen: number = 0
+        while ((readLen = fileIo.readSync(srcFile.fd, buffer)) > 0) {
+          fileIo.writeSync(destFile.fd, buffer.slice(0, readLen))
+        }
+        fileIo.closeSync(srcFile)
+        fileIo.closeSync(destFile)
+        this.viewModel.updateAlbumArt(destPath)
+      }
+    } catch (e) {
+      console.error('选择封面失败: ' + JSON.stringify(e))
+    }
   }
 }

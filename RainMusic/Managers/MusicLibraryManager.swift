@@ -209,6 +209,15 @@ final class MusicLibraryManager {
             try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
         }
 
+        // 去重：检查是否已存在相同文件路径的歌曲
+        let fileURLString = destinationURL.absoluteString
+        let existingDescriptor = FetchDescriptor<Song>(
+            predicate: #Predicate { $0.fileURL.absoluteString == fileURLString }
+        )
+        if let existingSong = try? modelContext.fetch(existingDescriptor).first {
+            return existingSong
+        }
+
         // 查找歌词文件
         let lyricsDir = getLyricsDirectory()
         let lyricsFileURL = findLyricsFile(for: title, in: lyricsDir)

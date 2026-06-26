@@ -21,6 +21,9 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE id = :id")
     suspend fun getSongById(id: Long): Song?
 
+    @Query("SELECT * FROM songs WHERE fileUri = :filePath LIMIT 1")
+    suspend fun getSongByFilePath(filePath: String): Song?
+
     @Query("SELECT * FROM songs WHERE title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%' OR album LIKE '%' || :query || '%'")
     fun searchSongs(query: String): Flow<List<Song>>
 
@@ -32,6 +35,9 @@ interface SongDao {
 
     @Delete
     suspend fun delete(song: Song)
+
+    @Update
+    suspend fun update(song: Song)
 
     @Query("DELETE FROM songs WHERE id = :id")
     suspend fun deleteById(id: Int)

@@ -3,6 +3,7 @@ package com.rain.music.manager
 import android.content.ComponentName
 import android.content.Context
 import android.media.AudioManager
+import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -112,41 +113,45 @@ class AudioPlayerManager(private val context: Context) {
 
     fun play(song: Song) {
         if (_currentSong.value?.id == song.id && mediaController?.isPlaying == true) return
-
-        val mediaItem = MediaItem.Builder()
-            .setUri(song.fileUri)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(song.title)
-                    .setArtist(song.artist)
-                    .setAlbumTitle(song.album)
-                    .build()
-            )
-            .build()
-
-        mediaController?.setMediaItem(mediaItem)
+    
+        val songIndex = playlist.indexOfFirst { it.id == song.id }
+    
+        if (songIndex >= 0 && playlist.size > 1) {
+            // 设置完整播放列表（带封面），通知栏上一曲/下一曲自动生效
+            val mediaItems = playlist.map { s -> buildMediaItem(s) }
+            mediaController?.setMediaItems(mediaItems, songIndex, 0L)
+        } else {
+            // 单首播放
+            mediaController?.setMediaItem(buildMediaItem(song))
+        }
         mediaController?.prepare()
         mediaController?.play()
-
+    
         _currentSong.value = song
-        currentIndex = playlist.indexOfFirst { it.id == song.id }
+        currentIndex = if (songIndex >= 0) songIndex else 0
+    }
+    
+    /**
+     * 构建带封面的 MediaItem
+     */
+    private fun buildMediaItem(song: Song): MediaItem {
+        val metadataBuilder = MediaMetadata.Builder()
+            .setTitle(song.title)
+            .setArtist(song.artist)
+            .setAlbumTitle(song.album)
+        song.albumArtUri?.let {
+            metadataBuilder.setArtworkUri(Uri.parse(it))
+        }
+        return MediaItem.Builder()
+            .setUri(song.fileUri)
+            .setMediaMetadata(metadataBuilder.build())
+            .build()
     }
 
     fun setPlaylist(songs: List<Song>, startIndex: Int = 0) {
         playlist = songs
         if (songs.isNotEmpty() && startIndex in songs.indices) {
-            val mediaItems = songs.map { song ->
-                MediaItem.Builder()
-                    .setUri(song.fileUri)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(song.title)
-                            .setArtist(song.artist)
-                            .setAlbumTitle(song.album)
-                            .build()
-                    )
-                    .build()
-            }
+            val mediaItems = songs.map { song -> buildMediaItem(song) }
             mediaController?.setMediaItems(mediaItems, startIndex, 0L)
             mediaController?.prepare()
             mediaController?.play()
@@ -168,13 +173,7 @@ class AudioPlayerManager(private val context: Context) {
             _repeatMode.value == RepeatMode.ONE -> currentIndex
             _shuffleMode.value == ShuffleMode.ON -> (0 until playlist.size).random()
             _repeatMode.value == RepeatMode.ALL -> (currentIndex + 1) % playlist.size
-            else -> {
-                val next = currentIndex + 1
-                if (next < playlist.size) next else {
-                    stop()
-                    return
-                }
-            }
+            else -> (currentIndex + 1) % playlist.size
         }
 
         if (nextIndex in playlist.indices) {

@@ -146,8 +146,6 @@ final class AudioPlayerManager: NSObject {
         if let nextIndex = nextIndex, nextIndex < playlist.count {
             currentIndex = nextIndex
             play(song: playlist[nextIndex])
-        } else {
-            stop()
         }
     }
 
@@ -230,8 +228,7 @@ final class AudioPlayerManager: NSObject {
         case (.off, .all):
             return (currentIndex + 1) % playlist.count
         case (.off, .off):
-            let next = currentIndex + 1
-            return next < playlist.count ? next : nil
+            return (currentIndex + 1) % playlist.count
         }
     }
 
