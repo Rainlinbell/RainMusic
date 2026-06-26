@@ -170,7 +170,10 @@ class AudioPlayerManager(private val context: Context) {
             _repeatMode.value == RepeatMode.ALL -> (currentIndex + 1) % playlist.size
             else -> {
                 val next = currentIndex + 1
-                if (next < playlist.size) next else return
+                if (next < playlist.size) next else {
+                    stop()
+                    return
+                }
             }
         }
 
@@ -238,6 +241,14 @@ class AudioPlayerManager(private val context: Context) {
             RepeatMode.ALL -> RepeatMode.ONE
             RepeatMode.ONE -> RepeatMode.OFF
         }
+    }
+
+    fun stop() {
+        mediaController?.stop()
+        _currentSong.value = null
+        _isPlaying.value = false
+        _currentTime.value = 0L
+        _duration.value = 0L
     }
 
     fun release() {

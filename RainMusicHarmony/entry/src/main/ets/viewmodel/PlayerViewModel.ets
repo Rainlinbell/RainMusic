@@ -97,12 +97,18 @@ export class PlayerViewModel {
     this.isScanning = false
   }
 
-  // 导入
+  // 导入（支持去重）
   async importFile(uri: string) {
     const song = await this.musicScanner.importFile(uri)
     if (song) {
-      this.songs = [...this.songs, song]
-      this.scanResult = `导入成功: ${song.title}`
+      // 检查是否已存在（根据文件路径去重）
+      const exists = this.songs.some(s => s.fileUri === song.fileUri)
+      if (!exists) {
+        this.songs = [...this.songs, song]
+        this.scanResult = `导入成功: ${song.title}`
+      } else {
+        this.scanResult = `歌曲已存在: ${song.title}`
+      }
     }
   }
 

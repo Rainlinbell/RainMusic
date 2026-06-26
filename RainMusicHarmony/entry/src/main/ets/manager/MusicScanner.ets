@@ -13,16 +13,19 @@ export class MusicScanner {
   }
 
   /**
-   * 扫描设备音乐库（扫描公共音乐目录）
+   * 扫描设备音乐库（递归扫描公共音乐目录）
    */
   async scanDeviceMusic(): Promise<Song[]> {
     const songs: Song[] = []
+    const scannedPaths = new Set<string>()
 
     try {
-      // 扫描常见的音乐目录
+      // 扫描多个可能的音乐目录
       const musicDirs: string[] = [
-        '/data/storage/el2/base/files/music',
-        this.context.filesDir + '/music'
+        this.context.filesDir + '/music',
+        '/storage/media/common/Music',
+        '/storage/media/100/local/files/Music',
+        '/data/storage/el2/base/files/music'
       ]
 
       for (const dir of musicDirs) {
@@ -30,25 +33,7 @@ export class MusicScanner {
           if (!fileIo.accessSync(dir)) {
             continue
           }
-          const dirEntries = fileIo.listFileSync(dir)
-          for (const entry of dirEntries) {
-            const fullPath = dir + '/' + entry
-            if (this.isAudioFile(entry)) {
-              const stat = fileIo.statSync(fullPath)
-              const song = new Song({
-                id: this.hashId(fullPath),
-                title: entry.replace(/\.[^/.]+$/, ''),
-                artist: '未知艺术家',
-                album: '未知专辑',
-                duration: 0,
-                fileUri: fullPath,
-                dateAdded: stat.mtime,
-                sourceType: 'scan'
-              })
-              song.lyricsPath = this.findLyricsFile(fullPath)
-              songs.push(song)
-            }
-          }
+          this.scanDirectory(dir, songs, scannedPaths, 0)
         } catch (e) {
           // 目录不存在或无法访问，跳过
         }
@@ -61,20 +46,71 @@ export class MusicScanner {
   }
 
   /**
-   * 导入单个音频文件
+   * 递归扫描目录下的音频文件（最多3层深度）
+   */
+  private scanDirectory(dir: string, songs: Song[], scannedPaths: Set<string>, depth: number) {
+    if (depth > 3) return
+    if (scannedPaths.has(dir)) return
+    scannedPaths.add(dir)
+
+    try {
+      const dirEntries = fileIo.listFileSync(dir)
+      for (const entry of dirEntries) {
+        const fullPath = dir + '/' + entry
+        try {
+          const stat = fileIo.statSync(fullPath)
+          if (stat.isDirectory()) {
+            // 递归扫描子目录
+            this.scanDirectory(fullPath, songs, scannedPaths, depth + 1)
+          } else if (this.isAudioFile(entry) && stat.size > 10000) {
+            // 跳过小于10KB的文件（大概率不是有效音频）
+            const song = new Song({
+              id: this.hashId(fullPath),
+              title: entry.replace(/\.[^/.]+$/, ''),
+              artist: '未知艺术家',
+              album: '未知专辑',
+              duration: 0,
+              fileUri: fullPath,
+              dateAdded: stat.mtime,
+              sourceType: 'scan'
+            })
+            song.lyricsPath = this.findLyricsFile(fullPath)
+            songs.push(song)
+          }
+        } catch (e) {
+          // 单个文件/目录出错，跳过继续
+        }
+      }
+    } catch (e) {
+      // 目录读取失败，跳过
+    }
+  }
+
+  /**
+   * 导入单个音频文件（从文件选择器 URI 复制到应用沙盒）
    */
   async importFile(sourceUri: string): Promise<Song | null> {
     try {
-      // 复制到应用沙盒
+      // 确保目标目录存在
       const destDir = this.context.filesDir + '/music'
       if (!fileIo.accessSync(destDir)) {
         fileIo.mkdirSync(destDir, true)
       }
 
-      const fileName = sourceUri.split('/').pop() ?? 'imported_audio'
+      // 从 URI 提取文件名，确保唯一性
+      let fileName = sourceUri.split('/').pop() ?? 'imported_audio'
+      // 去除可能的查询参数
+      fileName = fileName.split('?')[0]
+      // 添加时间戳避免重名覆盖
+      const nameParts = fileName.lastIndexOf('.')
+      if (nameParts > 0) {
+        fileName = fileName.substring(0, nameParts) + '_' + Date.now() + fileName.substring(nameParts)
+      } else {
+        fileName = fileName + '_' + Date.now()
+      }
       const destPath = destDir + '/' + fileName
 
-      // 复制文件
+      // 复制文件到应用沙盒
       const srcFile = fileIo.openSync(sourceUri, fileIo.OpenMode.READ_ONLY)
       const destFile = fileIo.openSync(destPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY)
       const buffer = new ArrayBuffer(1024 * 64)
@@ -87,9 +123,9 @@ export class MusicScanner {
 
       const stat = fileIo.statSync(destPath)
 
-      return new Song({
+      const song = new Song({
         id: Date.now(),
-        title: fileName.replace(/\.[^/.]+$/, ''),
+        title: fileName.replace(/\.[^/.]+$/, '').replace(/_\d+$/, ''),
         artist: '未知艺术家',
         album: '未知专辑',
         duration: 0,
@@ -97,6 +133,8 @@ export class MusicScanner {
         dateAdded: stat.mtime,
         sourceType: 'import'
       })
+      song.lyricsPath = this.findLyricsFile(destPath)
+      return song
     } catch (e) {
       console.error('导入文件失败: ' + JSON.stringify(e))
       return null

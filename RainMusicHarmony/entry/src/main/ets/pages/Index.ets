@@ -3,6 +3,8 @@ import { SongRow } from '../components/SongRow'
 import { MiniPlayer } from '../components/MiniPlayer'
 import { Song, SortOrder } from '../model/SongModel'
 import { router } from '@kit.ArkUI'
+import { picker } from '@kit.CoreFileKit'
+import { promptAction } from '@kit.ArkUI'
 
 /**
  * 音乐库主页
@@ -36,7 +38,16 @@ struct Index {
           .backgroundColor(Color.Transparent)
           .onClick(() => { this.cycleSortOrder() })
 
-          // 更多菜单
+          // 扫描按钮
+          Button() {
+            Text('🔍')
+              .fontSize(18)
+          }
+          .type(ButtonType.Circle)
+          .backgroundColor(Color.Transparent)
+          .onClick(() => { this.doScan() })
+
+          // 导入按钮
           Button() {
             Text('+')
               .fontSize(24)
@@ -44,7 +55,7 @@ struct Index {
           }
           .type(ButtonType.Circle)
           .backgroundColor(Color.Transparent)
-          .onClick(() => { this.showMoreMenu() })
+          .onClick(() => { this.pickAndImport() })
         }
         .width('100%')
         .padding({ left: 16, right: 16, top: 12, bottom: 8 })
@@ -162,7 +173,7 @@ struct Index {
           .backgroundColor('#6650A4')
           .fontColor('#FFFFFF')
           .layoutWeight(1)
-          .onClick(() => { this.viewModel.scanMusic() })
+          .onClick(() => { this.doScan() })
 
         Button('导入文件')
           .type(ButtonType.Capsule)
@@ -171,6 +182,7 @@ struct Index {
           .borderColor('#6650A4')
           .borderWidth(1)
           .layoutWeight(1)
+          .onClick(() => { this.pickAndImport() })
       }
       .width('100%')
       .padding({ left: 40, right: 40 })
@@ -199,8 +211,33 @@ struct Index {
     }
   }
 
-  private showMoreMenu() {
-    // 扫描音乐库
-    this.viewModel.scanMusic()
+  /**
+   * 扫描音乐库并显示结果
+   */
+  private async doScan() {
+    await this.viewModel.scanMusic()
+    promptAction.showToast({ message: this.viewModel.scanResult, duration: 2000 })
+  }
+
+  /**
+   * 打开文件选择器并导入音频文件
+   */
+  private async pickAndImport() {
+    try {
+      const documentPicker = new picker.DocumentViewPicker()
+      const options: picker.DocumentSelectOptions = {
+        fileSuffixFilters: ['.mp3', '.flac', '.wav', '.aac', '.ogg', '.m4a', '.wma', '.ape'],
+        maxSelectNumber: 20
+      }
+      const uris = await documentPicker.select(options)
+      if (uris && uris.length > 0) {
+        for (const uri of uris) {
+          await this.viewModel.importFile(uri)
+        }
+        promptAction.showToast({ message: `导入成功 ${uris.length} 首歌曲`, duration: 2000 })
+      }
+    } catch (e) {
+      console.error('文件选择失败: ' + JSON.stringify(e))
+    }
   }
 }
