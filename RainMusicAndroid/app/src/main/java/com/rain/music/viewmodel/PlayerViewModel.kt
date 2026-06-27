@@ -116,9 +116,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun scanMusic() {
         viewModelScope.launch {
             _isScanning.value = true
-            val count = musicScanner.scanDeviceMusic()
-            _scanResult.value = "扫描完成，找到 $count 首歌曲"
-            _isScanning.value = false
+            try {
+                val count = musicScanner.scanDeviceMusic()
+                _scanResult.value = if (count > 0) "扫描完成，新增 $count 首歌曲" else "未找到新歌曲"
+            } catch (e: Exception) {
+                _scanResult.value = "扫描失败: ${e.message}"
+            } finally {
+                _isScanning.value = false
+            }
         }
     }
 

@@ -1,14 +1,21 @@
 package com.rain.music.ui.screen
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,7 +26,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +60,15 @@ fun PlayerScreen(
     val showLyrics by viewModel.showLyrics.collectAsState()
     val systemVolume by viewModel.systemVolume.collectAsState()
     val context = LocalContext.current
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+
+    // 上下滑动切歌状态
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    val animatedOffset by animateFloatAsState(
+        targetValue = dragOffsetY,
+        animationSpec = tween(durationMillis = 300, easing = EaseInOut),
+        label = "swipeOffset"
+    )
 
     // 图片选择器
     val imagePicker = rememberLauncherForActivityResult(
@@ -65,6 +84,9 @@ fun PlayerScreen(
         }
     }
 
+    // 根据屏幕高度动态计算封面尺寸
+    val albumSize = (screenHeight.value * 0.32f).dp.coerceIn(200.dp, 280.dp)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -77,22 +99,55 @@ fun PlayerScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        // 上下滑动切歌容器
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .graphicsLayer { translationY = animatedOffset }
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragEnd = {
+                            val threshold = size.height * 0.18f
+                            if (dragOffsetY < -threshold) {
+                                viewModel.playNext()
+                            } else if (dragOffsetY > threshold) {
+                                viewModel.playPrevious()
+                            }
+                            dragOffsetY = 0f
+                        },
+                        onDragCancel = { dragOffsetY = 0f },
+                        onVerticalDrag = { change, dragAmount ->
+                            change.consume()
+                            dragOffsetY += dragAmount
+                        }
+                    )
+                }
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            // 歌曲内容（使用 AnimatedContent 实现切歌动画）
+            androidx.compose.animation.AnimatedContent(
+                targetState = currentSong?.id,
+                transitionSpec = {
+                    val direction = if (dragOffsetY < 0) 1 else -1
+                    (slideInVertically(animationSpec = tween(300, easing = EaseInOut)) { h -> h * direction } + fadeIn(animationSpec = tween(300))) togetherWith
+                    (slideOutVertically(animationSpec = tween(300, easing = EaseInOut)) { h -> -h * direction } + fadeOut(animationSpec = tween(300)))
+                },
+                label = "song_transition"
+            ) { _ ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Spacer(modifier = Modifier.height(4.dp))
 
             // 封面 / 歌词切换
             if (showLyrics) {
                 LyricsContent(
                     lyrics = lyrics,
                     currentIndex = currentLyricIndex,
-                    modifier = Modifier.height(320.dp)
+                    modifier = Modifier.height(albumSize + 40.dp)
                 )
             } else {
                 // 专辑封面（长按更换封面）
@@ -101,7 +156,7 @@ fun PlayerScreen(
                         model = currentSong?.albumArtUri,
                         contentDescription = null,
                         modifier = Modifier
-                            .size(280.dp)
+                            .size(albumSize)
                             .clip(MaterialTheme.shapes.large)
                             .combinedClickable(
                                 onClick = { },
@@ -116,7 +171,7 @@ fun PlayerScreen(
                 } else {
                     Surface(
                         modifier = Modifier
-                            .size(280.dp)
+                            .size(albumSize)
                             .combinedClickable(
                                 onClick = { },
                                 onLongClick = {
@@ -145,7 +200,7 @@ fun PlayerScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // 切换提示
             TextButton(onClick = { viewModel.toggleLyrics() }) {
@@ -156,7 +211,7 @@ fun PlayerScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // 歌曲信息
             Text(
@@ -180,7 +235,7 @@ fun PlayerScreen(
                 maxLines = 1
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // 进度条
             var isSeeking by remember { mutableStateOf(false) }
@@ -216,7 +271,7 @@ fun PlayerScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // 控制按钮
             Row(
@@ -269,7 +324,7 @@ fun PlayerScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // 音量（系统音量）
             Row(
@@ -285,8 +340,17 @@ fun PlayerScreen(
                 Icon(Icons.Default.VolumeUp, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-        }
+            Spacer(modifier = Modifier.height(16.dp))
+
+                    // 滑动提示
+                    Text(
+                        "\u2191\u2193 滑动切换歌曲",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                } // Column end
+            } // AnimatedContent end
+        } // Box end
     }
 }
 

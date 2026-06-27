@@ -8,6 +8,8 @@ struct PlayerView: View {
     @State private var seekTime: Double = 0
     @State private var showPhotosPicker = false
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var dragOffsetY: CGFloat = 0
+    @State private var lastSwitchTime: Date = .distantPast
 
     private let audioManager = AudioPlayerManager.shared
 
@@ -199,9 +201,48 @@ struct PlayerView: View {
                             .foregroundStyle(.secondary)
                     }
                     .padding(.horizontal, 24)
+
+                    // 滑动提示
+                    Text("↑↓ 滑动切换歌曲")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                 }
                 .padding(.vertical, 16)
             }
+            .offset(y: dragOffsetY)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 10)
+                    .onChanged { value in
+                        if Date().timeIntervalSince(lastSwitchTime) > 1.5 {
+                            dragOffsetY = value.translation.height
+                        }
+                    }
+                    .onEnded { value in
+                        let threshold = geometry.size.height * 0.18
+                        let now = Date()
+
+                        if dragOffsetY < -threshold && now.timeIntervalSince(lastSwitchTime) > 1.5 {
+                            // 上滑 → 下一曲
+                            viewModel.playNext()
+                            lastSwitchTime = now
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                dragOffsetY = 0
+                            }
+                        } else if dragOffsetY > threshold && now.timeIntervalSince(lastSwitchTime) > 1.5 {
+                            // 下滑 → 上一曲
+                            viewModel.playPrevious()
+                            lastSwitchTime = now
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                dragOffsetY = 0
+                            }
+                        } else {
+                            // 未达阈值，平滑回弹
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                dragOffsetY = 0
+                            }
+                        }
+                    }
+            )
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

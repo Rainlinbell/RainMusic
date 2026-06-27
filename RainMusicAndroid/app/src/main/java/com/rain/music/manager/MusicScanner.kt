@@ -37,70 +37,79 @@ class MusicScanner(private val context: Context, private val songDao: SongDao) {
      */
     suspend fun scanDeviceMusic(): Int = withContext(Dispatchers.IO) {
         val songs = mutableListOf<Song>()
-        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        } else {
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-        }
+        try {
+            val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            } else {
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+            }
 
-        val projection = arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.ALBUM,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.DATA
-        )
+            val projection = arrayOf(
+                MediaStore.Audio.Media._ID,
+                MediaStore.Audio.Media.TITLE,
+                MediaStore.Audio.Media.ARTIST,
+                MediaStore.Audio.Media.ALBUM,
+                MediaStore.Audio.Media.DURATION,
+                MediaStore.Audio.Media.DATA
+            )
 
-        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
+            val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
-        context.contentResolver.query(
-            collection,
-            projection,
-            null,
-            null,
-            sortOrder
-        )?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-            val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-            val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-            val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-            val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            context.contentResolver.query(
+                collection,
+                projection,
+                null,
+                null,
+                sortOrder
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+                val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+                val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+                val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+                val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
 
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                val title = cursor.getString(titleColumn) ?: "未知歌曲"
-                val artist = cursor.getString(artistColumn) ?: "未知艺术家"
-                val album = cursor.getString(albumColumn) ?: "未知专辑"
-                val duration = cursor.getLong(durationColumn)
-                val data = cursor.getString(dataColumn)
+                while (cursor.moveToNext()) {
+                    try {
+                        val id = cursor.getLong(idColumn)
+                        val title = cursor.getString(titleColumn) ?: "未知歌曲"
+                        val artist = cursor.getString(artistColumn) ?: "未知艺术家"
+                        val album = cursor.getString(albumColumn) ?: "未知专辑"
+                        val duration = cursor.getLong(durationColumn)
+                        val data = cursor.getString(dataColumn)
 
-                if (duration > 10000) {
-                    val fileUri = data ?: ContentUris.withAppendedId(collection, id).toString()
-                    // 去重：检查是否已存在相同文件路径
-                    val existing = songDao.getSongByFilePath(fileUri)
-                    if (existing != null) continue
+                        if (duration > 10000) {
+                            val fileUri = data ?: ContentUris.withAppendedId(collection, id).toString()
+                            // 去重：检查是否已存在相同文件路径
+                            val existing = songDao.getSongByFilePath(fileUri)
+                            if (existing != null) continue
 
-                    val contentUri = ContentUris.withAppendedId(collection, id)
-                    val albumArtUri = getAlbumArtUri(id)
+                            val albumArtUri = getAlbumArtUri(id)
 
-                    val song = Song(
-                        title = title,
-                        artist = artist,
-                        album = album,
-                        duration = duration,
-                        fileUri = fileUri,
-                        albumArtUri = albumArtUri,
-                        sourceType = "library"
-                    )
-                    songs.add(song)
+                            val song = Song(
+                                title = title,
+                                artist = artist,
+                                album = album,
+                                duration = duration,
+                                fileUri = fileUri,
+                                albumArtUri = albumArtUri,
+                                sourceType = "library"
+                            )
+                            songs.add(song)
+                        }
+                    } catch (e: Exception) {
+                        // 单首歌曲解析失败不影响整体扫描
+                        continue
+                    }
                 }
             }
-        }
 
-        if (songs.isNotEmpty()) {
-            songDao.insertAll(songs)
+            if (songs.isNotEmpty()) {
+                songDao.insertAll(songs)
+            }
+        } catch (e: Exception) {
+            // 顶层捕获：权限拒绝、数据库错误等
+            e.printStackTrace()
         }
 
         songs.size

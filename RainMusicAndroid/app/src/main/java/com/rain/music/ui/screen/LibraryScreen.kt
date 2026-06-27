@@ -1,18 +1,29 @@
 package com.rain.music.ui.screen
 
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlin.math.abs
 import coil.compose.AsyncImage
 import com.rain.music.data.model.Song
 import com.rain.music.viewmodel.PlayerViewModel
@@ -34,6 +45,56 @@ fun LibraryScreen(
     var showSortMenu by remember { mutableStateOf(false) }
     var isSearchActive by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+
+    // 上下滑动切歌状态
+    var switchTargetOffset by remember { mutableFloatStateOf(0f) }
+    var lastSwitchTime by remember { mutableLongStateOf(0L) }
+    val switchOffset by animateFloatAsState(
+        targetValue = switchTargetOffset,
+        animationSpec = tween(durationMillis = 300, easing = EaseInOut),
+        label = "switchOffset"
+    )
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                val now = System.currentTimeMillis()
+                if (now - lastSwitchTime < 1500) return Offset.Zero
+                if (abs(available.y) > 40f) {
+                    if (available.y > 0 && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
+                        switchTargetOffset = 60f
+                        lastSwitchTime = now
+                        viewModel.playPrevious()
+                    } else if (available.y < 0) {
+                        val layoutInfo = listState.layoutInfo
+                        val lastItem = layoutInfo.visibleItemsInfo.lastOrNull()
+                        val isAtBottom = lastItem != null &&
+                            lastItem.index == layoutInfo.totalItemsCount - 1 &&
+                            lastItem.offset + lastItem.size <= layoutInfo.viewportEndOffset
+                        if (isAtBottom || layoutInfo.totalItemsCount == 0) {
+                            switchTargetOffset = -60f
+                            lastSwitchTime = now
+                            viewModel.playNext()
+                        }
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    // 切歌平滑回弹动画
+    LaunchedEffect(switchTargetOffset) {
+        if (switchTargetOffset != 0f) {
+            delay(200)
+            switchTargetOffset = 0f
+        }
+    }
 
     // 搜索栏关闭时清除搜索状态
     LaunchedEffect(isSearchActive) {
@@ -169,7 +230,11 @@ fun LibraryScreen(
             } else {
                 // 歌曲列表
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(nestedScrollConnection)
+                        .graphicsLayer { translationY = switchOffset },
                     contentPadding = PaddingValues(bottom = if (currentSong != null) 80.dp else 0.dp)
                 ) {
                     items(songs, key = { it.id }) { song ->

@@ -12,6 +12,7 @@ final class MusicLibraryManager {
     var scanProgress: Double = 0
     var isImporting: Bool = false
     var importError: String?
+    var scanError: String?
 
     private init() {}
 
@@ -28,107 +29,122 @@ final class MusicLibraryManager {
         await MainActor.run {
             isScanning = true
             scanProgress = 0
+            scanError = nil
         }
 
-        let authorized = await requestMediaLibraryAccess()
-        guard authorized else {
-            print("⚠️ 未获得媒体库访问权限")
-            await MainActor.run { isScanning = false }
-            return
-        }
+        do {
+            let authorized = await requestMediaLibraryAccess()
+            guard authorized else {
+                print("⚠️ 未获得媒体库访问权限")
+                await MainActor.run {
+                    isScanning = false
+                    scanError = "未获得媒体库访问权限"
+                }
+                return
+            }
 
-        let query = MPMediaQuery.songs()
-        query.addFilterPredicate(
-            MPMediaPropertyPredicate(
-                value: MPMediaType.music.rawValue,
-                forProperty: MPMediaItemPropertyMediaType
+            let query = MPMediaQuery.songs()
+            query.addFilterPredicate(
+                MPMediaPropertyPredicate(
+                    value: MPMediaType.music.rawValue,
+                    forProperty: MPMediaItemPropertyMediaType
+                )
             )
-        )
 
-        guard let items = query.items else {
+            guard let items = query.items else {
+                await MainActor.run {
+                    isScanning = false
+                    scanProgress = 1.0
+                }
+                return
+            }
+
+            let total = items.count
+            let musicDir = getMusicDirectory()
+            let lyricsDir = getLyricsDirectory()
+
+            for (index, item) in items.enumerated() {
+                do {
+                    // 跳过 DRM 保护的歌曲
+                    guard let assetURL = item.value(forProperty: MPMediaItemPropertyAssetURL) as? URL else {
+                        continue
+                    }
+
+                    let persistentIDRaw = item.value(forProperty: MPMediaItemPropertyPersistentID) as? NSNumber ?? NSNumber(value: 0)
+                    let persistentID = persistentIDRaw.stringValue
+
+                    // 检查是否已存在
+                    let descriptor = FetchDescriptor<Song>(
+                        predicate: #Predicate { $0.mediaLibraryPersistentID == persistentID }
+                    )
+                    if let _ = try? modelContext.fetch(descriptor) {
+                        await MainActor.run {
+                            scanProgress = Double(index + 1) / Double(total)
+                        }
+                        continue
+                    }
+
+                    // 导出音频文件到沙盒
+                    let title = item.value(forProperty: MPMediaItemPropertyTitle) as? String ?? "未知歌曲"
+                    let artist = item.value(forProperty: MPMediaItemPropertyArtist) as? String ?? "未知艺术家"
+                    let album = item.value(forProperty: MPMediaItemPropertyAlbumTitle) as? String ?? "未知专辑"
+                    let duration = item.value(forProperty: MPMediaItemPropertyPlaybackDuration) as? Double ?? 0
+
+                    let safeFileName = "\(artist)-\(title)".replacingOccurrences(
+                        of: "/", with: "_"
+                    ).replacingOccurrences(of: ":", with: "_")
+                    let destinationURL = musicDir.appendingPathComponent("\(safeFileName).m4a")
+
+                    try await exportMediaItem(assetURL: assetURL, to: destinationURL)
+
+                    // 提取封面
+                    var albumArtData: Data? = nil
+                    if let artwork = item.value(forProperty: MPMediaItemPropertyArtwork) as? MPMediaItemArtwork {
+                        let image = artwork.image(at: CGSize(width: 512, height: 512))
+                        albumArtData = image?.pngData()
+                    }
+
+                    // 查找歌词文件
+                    let lyricsFileURL = findLyricsFile(for: title, in: lyricsDir)
+
+                    let song = Song(
+                        title: title,
+                        artist: artist,
+                        album: album,
+                        duration: duration,
+                        fileURL: destinationURL,
+                        albumArtData: albumArtData,
+                        hasLyrics: lyricsFileURL != nil,
+                        lyricsFileURL: lyricsFileURL,
+                        sourceType: "library",
+                        mediaLibraryPersistentID: persistentID
+                    )
+                    modelContext.insert(song)
+
+                } catch {
+                    // 单首歌曲失败不影响整体扫描
+                    print("⚠️ 处理歌曲失败: \(error.localizedDescription)")
+                }
+
+                await MainActor.run {
+                    scanProgress = Double(index + 1) / Double(total)
+                }
+            }
+
+            try? modelContext.save()
+
             await MainActor.run {
                 isScanning = false
                 scanProgress = 1.0
             }
-            return
-        }
 
-        let total = items.count
-        let musicDir = getMusicDirectory()
-        let lyricsDir = getLyricsDirectory()
-
-        for (index, item) in items.enumerated() {
-            // 跳过 DRM 保护的歌曲
-            guard let assetURL = item.value(forProperty: MPMediaItemPropertyAssetURL) as? URL else {
-                continue
-            }
-
-            let persistentIDRaw = item.value(forProperty: MPMediaItemPropertyPersistentID) as? NSNumber ?? NSNumber(value: 0)
-            let persistentID = persistentIDRaw.stringValue
-
-            // 检查是否已存在
-            let descriptor = FetchDescriptor<Song>(
-                predicate: #Predicate { $0.mediaLibraryPersistentID == persistentID }
-            )
-            if let _ = try? modelContext.fetch(descriptor) {
-                await MainActor.run {
-                    scanProgress = Double(index + 1) / Double(total)
-                }
-                continue
-            }
-
-            // 导出音频文件到沙盒
-            let title = item.value(forProperty: MPMediaItemPropertyTitle) as? String ?? "未知歌曲"
-            let artist = item.value(forProperty: MPMediaItemPropertyArtist) as? String ?? "未知艺术家"
-            let album = item.value(forProperty: MPMediaItemPropertyAlbumTitle) as? String ?? "未知专辑"
-            let duration = item.value(forProperty: MPMediaItemPropertyPlaybackDuration) as? Double ?? 0
-
-            let safeFileName = "\(artist)-\(title)".replacingOccurrences(
-                of: "/", with: "_"
-            ).replacingOccurrences(of: ":", with: "_")
-            let destinationURL = musicDir.appendingPathComponent("\(safeFileName).m4a")
-
-            do {
-                try await exportMediaItem(assetURL: assetURL, to: destinationURL)
-
-                // 提取封面
-                var albumArtData: Data? = nil
-                if let artwork = item.value(forProperty: MPMediaItemPropertyArtwork) as? MPMediaItemArtwork {
-                    let image = artwork.image(at: CGSize(width: 512, height: 512))
-                    albumArtData = image?.pngData()
-                }
-
-                // 查找歌词文件
-                let lyricsFileURL = findLyricsFile(for: title, in: lyricsDir)
-
-                let song = Song(
-                    title: title,
-                    artist: artist,
-                    album: album,
-                    duration: duration,
-                    fileURL: destinationURL,
-                    albumArtData: albumArtData,
-                    hasLyrics: lyricsFileURL != nil,
-                    lyricsFileURL: lyricsFileURL,
-                    sourceType: "library",
-                    mediaLibraryPersistentID: persistentID
-                )
-                modelContext.insert(song)
-
-            } catch {
-                print("⚠️ 导出失败 [\(title)]: \(error.localizedDescription)")
-            }
-
+        } catch {
+            // 顶层捕获：防止任何未预期的异常导致崩溃
+            print("⚠️ 扫描音乐库失败: \(error.localizedDescription)")
             await MainActor.run {
-                scanProgress = Double(index + 1) / Double(total)
+                isScanning = false
+                scanError = "扫描失败: \(error.localizedDescription)"
             }
-        }
-
-        try? modelContext.save()
-
-        await MainActor.run {
-            isScanning = false
-            scanProgress = 1.0
         }
     }
 

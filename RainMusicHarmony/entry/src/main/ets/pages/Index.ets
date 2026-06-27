@@ -15,6 +15,9 @@ struct Index {
   @State viewModel: PlayerViewModel = new PlayerViewModel(getContext(this) as import('@kit.AbilityKit').common.UIAbilityContext)
   @State searchText: string = ''
   @State showMiniPlayer: boolean = false
+  @State lastVisibleIndex: number = 0
+  @State lastSwitchTime: number = 0
+  @State listOffsetY: number = 0
 
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
@@ -88,6 +91,51 @@ struct Index {
           .width('100%')
           .layoutWeight(1)
           .padding({ bottom: this.showMiniPlayer ? 70 : 0 })
+          .offset({ y: this.listOffsetY })
+          .onScrollIndex((firstIndex: number, lastIndex: number) => {
+            this.lastVisibleIndex = lastIndex
+          })
+          .gesture(
+            PanGesture({ direction: PanDirection.Vertical, distance: 10 })
+              .onActionUpdate((event: GestureEvent) => {
+                // 跟随手指移动（弹性效果）
+                this.listOffsetY = event.offsetY * 0.3
+              })
+              .onActionEnd((event: GestureEvent) => {
+                const now = Date.now()
+                const threshold = 100
+                if (event.offsetY < -threshold && now - this.lastSwitchTime > 1500) {
+                  // 上滑 → 下一曲
+                  this.lastSwitchTime = now
+                  animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
+                    this.listOffsetY = -80
+                  })
+                  setTimeout(() => {
+                    this.viewModel.playNext()
+                    animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                      this.listOffsetY = 0
+                    })
+                  }, 150)
+                } else if (event.offsetY > threshold && now - this.lastSwitchTime > 1500) {
+                  // 下滑 → 上一曲
+                  this.lastSwitchTime = now
+                  animateTo({ duration: 250, curve: Curve.FastOutSlowIn }, () => {
+                    this.listOffsetY = 80
+                  })
+                  setTimeout(() => {
+                    this.viewModel.playPrevious()
+                    animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                      this.listOffsetY = 0
+                    })
+                  }, 150)
+                } else {
+                  // 未达阈值，平滑回弹
+                  animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                    this.listOffsetY = 0
+                  })
+                }
+              })
+          )
         }
       }
       .width('100%')
@@ -206,8 +254,12 @@ struct Index {
    * 扫描音乐库并显示结果
    */
   private async doScan() {
-    await this.viewModel.scanMusic()
-    promptAction.showToast({ message: this.viewModel.scanResult, duration: 2000 })
+    try {
+      await this.viewModel.scanMusic()
+      promptAction.showToast({ message: this.viewModel.scanResult, duration: 2000 })
+    } catch (e) {
+      promptAction.showToast({ message: '扫描出错', duration: 2000 })
+    }
   }
 
   /**

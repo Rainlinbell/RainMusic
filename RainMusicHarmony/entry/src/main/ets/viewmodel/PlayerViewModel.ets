@@ -91,13 +91,20 @@ export class PlayerViewModel {
   // 扫描（支持去重合并）
   async scanMusic() {
     this.isScanning = true
-    const result = await this.musicScanner.scanDeviceMusic()
-    // 去重：与现有歌曲列表按 fileUri 合并
-    const existingUris = new Set(this.songs.map(s => s.fileUri))
-    const newSongs = result.filter(s => !existingUris.has(s.fileUri))
-    this.songs = [...this.songs, ...newSongs]
-    this.scanResult = `扫描完成，新增 ${newSongs.length} 首歌曲（跳过 ${result.length - newSongs.length} 首重复）`
-    this.isScanning = false
+    try {
+      const result = await this.musicScanner.scanDeviceMusic()
+      // 去重：与现有歌曲列表按 fileUri 合并
+      const existingUris = new Set(this.songs.map(s => s.fileUri))
+      const newSongs = result.filter(s => !existingUris.has(s.fileUri))
+      this.songs = [...this.songs, ...newSongs]
+      this.scanResult = newSongs.length > 0
+        ? `扫描完成，新增 ${newSongs.length} 首歌曲（跳过 ${result.length - newSongs.length} 首重复）`
+        : '未找到新歌曲'
+    } catch (e) {
+      this.scanResult = '扫描失败: ' + JSON.stringify(e)
+    } finally {
+      this.isScanning = false
+    }
   }
 
   // 导入（支持去重）

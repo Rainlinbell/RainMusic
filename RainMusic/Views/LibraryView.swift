@@ -10,6 +10,8 @@ struct LibraryView: View {
     @State private var showImportView = false
     @State private var isScanning = false
     @State private var showPlayerSheet = false
+    @State private var listDragOffsetY: CGFloat = 0
+    @State private var lastSongSwitchTime: Date = .distantPast
 
     private let audioManager = AudioPlayerManager.shared
     private let libraryManager = MusicLibraryManager.shared
@@ -135,6 +137,55 @@ struct LibraryView: View {
         }
         .listStyle(.plain)
         .padding(.bottom, audioManager.currentSong != nil ? 70 : 0)
+        .offset(y: listDragOffsetY)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 20)
+                .onChanged { value in
+                    if Date().timeIntervalSince(lastSongSwitchTime) < 1.5 { return }
+                    listDragOffsetY = value.translation.height * 0.3
+                }
+                .onEnded { value in
+                    let threshold: CGFloat = 100
+                    let now = Date()
+                    guard now.timeIntervalSince(lastSongSwitchTime) > 1.5 else {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            listDragOffsetY = 0
+                        }
+                        return
+                    }
+
+                    if value.translation.height < -threshold {
+                        // 上滑 → 下一曲
+                        lastSongSwitchTime = now
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            listDragOffsetY = -80
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            audioManager.playNext()
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                listDragOffsetY = 0
+                            }
+                        }
+                    } else if value.translation.height > threshold {
+                        // 下滑 → 上一曲
+                        lastSongSwitchTime = now
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            listDragOffsetY = 80
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            audioManager.playPrevious()
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                listDragOffsetY = 0
+                            }
+                        }
+                    } else {
+                        // 未达阈值，平滑回弹
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            listDragOffsetY = 0
+                        }
+                    }
+                }
+        )
     }
 
     private var emptyStateView: some View {
@@ -217,6 +268,9 @@ struct LibraryView: View {
         isScanning = true
         await libraryManager.scanLibrary(modelContext: modelContext)
         isScanning = false
+        if let error = libraryManager.scanError {
+            print("⚠️ 扫描结果: \(error)")
+        }
     }
 
     private func deleteSong(_ song: Song) {

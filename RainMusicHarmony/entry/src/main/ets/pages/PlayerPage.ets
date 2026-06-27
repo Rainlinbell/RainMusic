@@ -16,6 +16,8 @@ struct PlayerPage {
   @State isSeeking: boolean = false
   @State seekPosition: number = 0
   @State showLyrics: boolean = false
+  @State dragOffsetY: number = 0
+  @State songTransition: number = 0
 
   build() {
     Column() {
@@ -236,13 +238,56 @@ struct PlayerPage {
           .alignItems(VerticalAlign.Center)
           .margin({ top: 24 })
 
-          Blank().height(32)
+          Blank().height(16)
+
+          // 滑动提示
+          Text('↑↓ 滑动切换歌曲')
+            .fontSize(11)
+            .fontColor('#79747E')
+            .margin({ top: 8 })
+          } // inner Column end
+          .width('100%')
+          .alignItems(HorizontalAlign.Center)
+          .offset({ y: this.dragOffsetY })
         }
-        .width('100%')
-        .alignItems(HorizontalAlign.Center)
-      }
-      .layoutWeight(1)
-      .scrollBar(BarState.Off)
+        .layoutWeight(1)
+        .gesture(
+        PanGesture({ direction: PanDirection.Vertical })
+          .onActionUpdate((event: GestureEvent) => {
+            this.dragOffsetY = event.offsetY
+          })
+          .onActionEnd((event: GestureEvent) => {
+            const threshold = 120
+            if (event.offsetY < -threshold) {
+              // 上滑 → 下一曲
+              animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                this.dragOffsetY = -300
+              })
+              setTimeout(() => {
+                this.viewModel.playNext()
+                animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                  this.dragOffsetY = 0
+                })
+              }, 150)
+            } else if (event.offsetY > threshold) {
+              // 下滑 → 上一曲
+              animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                this.dragOffsetY = 300
+              })
+              setTimeout(() => {
+                this.viewModel.playPrevious()
+                animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                  this.dragOffsetY = 0
+                })
+              }, 150)
+            } else {
+              // 未达到阈值，平滑回弹
+              animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+                this.dragOffsetY = 0
+              })
+            }
+          })
+      )
     }
     .width('100%')
     .height('100%')
