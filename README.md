@@ -7,22 +7,20 @@
 ## ✨ 功能特性
 
 ### 🎶 播放控制
+
 - 播放 / 暂停 / 上一曲 / 下一曲
 - 进度条拖拽跳转
 - 随机播放 / 单曲循环 / 列表循环 / 顺序播放
 - 播放到最后一首时按下一曲自动回到第一首
 
 ### 📲 通知栏 / 锁屏控制
+
 - Android：基于 Media3 MediaSession 的通知栏媒体控制，支持播放/暂停、上一曲/下一曲、进度拖动，显示专辑封面
 - iOS：基于 MPRemoteCommandCenter 的锁屏控制中心，支持完整播放控制及快进快退
 - HarmonyOS：基于 AVSession 的通知栏控制，支持播放/暂停、上一曲/下一曲、进度跳转
 
-### 🔊 无极音量控制
-- 滑块拖动实现连续浮点音量调节，无阶梯感
-- 与系统音量双向同步：App 内调节同步到系统，硬件音量键变化同步到 App
-- 三端各自使用平台原生 API 实现（iOS: MPVolumeView + KVO / Android: AudioManager / HarmonyOS: VolumeGroupManager）
-
 ### 📝 歌词同步
+
 - 支持 LRC 格式歌词解析
 - 支持一行多时间标签（重复歌词）
 - 二分查找实时定位当前歌词行
@@ -31,6 +29,7 @@
 - 自动查找同名 `.lrc` 歌词文件
 
 ### 📱 音乐管理
+
 - 设备音乐库扫描
 - 文件导入（支持 MP3 / FLAC / WAV / AAC / OGG / M4A / APE 等格式）
 - 歌曲重复检测：扫描和导入时自动检测已存在歌曲，避免重复添加
@@ -39,18 +38,21 @@
 - 专辑封面显示与自定义（长按封面可更换图片）
 
 ### 🎨 界面设计
-- 简洁 Material Design 3 风格
+
+- 统一设计系统：颜色、间距、字体、圆角、阴影跨平台对齐
+- 海军蓝深色主题（#0A1628），现代渐变强调色（#4FC3F7）
 - 封面 / 歌词点击切换
-- 底部迷你播放条
+- 底部迷你播放条（带进度条、播放控制）
 - 流畅的页面切换动画
+- 按钮按下缩放反馈动画
 
 ## 📦 三端技术栈
 
-| 平台 | 语言 | UI 框架 | 播放引擎 | 数据存储 | 架构 |
-|------|------|---------|---------|---------|------|
-| **iOS** | Swift | SwiftUI | AVAudioPlayer | SwiftData | MVVM |
-| **Android** | Kotlin | Jetpack Compose + Material 3 | Media3 ExoPlayer | Room Database | MVVM |
-| **HarmonyOS** | ArkTS | ArkUI | AVPlayer + AVSession | 内存存储 | MVVM |
+| 平台            | 语言     | UI 框架                        | 播放引擎                 | 数据存储          | 架构   |
+| ------------- | ------ | ---------------------------- | -------------------- | ------------- | ---- |
+| **iOS**       | Swift  | SwiftUI                      | AVAudioPlayer        | SwiftData     | MVVM |
+| **Android**   | Kotlin | Jetpack Compose + Material 3 | Media3 ExoPlayer     | Room Database | MVVM |
+| **HarmonyOS** | ArkTS  | ArkUI                        | AVPlayer + AVSession | 内存存储          | MVVM |
 
 ## 📂 项目结构
 
@@ -82,10 +84,12 @@ rain/
 ## 🚀 构建运行
 
 ### iOS
+
 - 环境：Xcode 15+ / iOS 17+
 - 使用 Xcode 打开项目，连接设备或模拟器运行
 
 ### Android
+
 - 环境：Android Studio / JDK 17
 - 命令行构建：
   ```bash
@@ -95,6 +99,7 @@ rain/
 - APK 输出路径：`app/build/outputs/apk/debug/`
 
 ### HarmonyOS NEXT
+
 - 环境：DevEco Studio / HarmonyOS SDK
 - 命令行构建：
   ```bash
