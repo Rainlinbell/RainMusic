@@ -3,22 +3,30 @@ package com.rain.music.ui.screen
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,21 +34,22 @@ import kotlinx.coroutines.delay
 import kotlin.math.abs
 import coil.compose.AsyncImage
 import com.rain.music.data.model.Song
+import com.rain.music.ui.theme.RainColors
+import com.rain.music.viewmodel.LibraryViewModel
 import com.rain.music.viewmodel.PlayerViewModel
 import com.rain.music.viewmodel.SortOrder
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     viewModel: PlayerViewModel,
-    onNavigateToPlayer: () -> Unit,
-    onNavigateToImport: () -> Unit
+    libraryViewModel: LibraryViewModel,
+    onNavigateToPlayer: () -> Unit
 ) {
-    val songs by viewModel.songs.collectAsState()
+    val songs by libraryViewModel.songs.collectAsState()
     val currentSong by viewModel.currentSong.collectAsState()
-    val isScanning by viewModel.isScanning.collectAsState()
-    val scanResult by viewModel.scanResult.collectAsState()
-    val sortOrder by viewModel.sortOrder.collectAsState()
+    val isScanning by libraryViewModel.isScanning.collectAsState()
+    val scanResult by libraryViewModel.scanResult.collectAsState()
+    val sortOrder by libraryViewModel.sortOrder.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     var showSortMenu by remember { mutableStateOf(false) }
     var isSearchActive by remember { mutableStateOf(false) }
@@ -69,7 +78,7 @@ fun LibraryScreen(
                     if (available.y > 0 && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
                         switchTargetOffset = 60f
                         lastSwitchTime = now
-                        viewModel.playPrevious()
+                        viewModel.playPrevious(songs)
                     } else if (available.y < 0) {
                         val layoutInfo = listState.layoutInfo
                         val lastItem = layoutInfo.visibleItemsInfo.lastOrNull()
@@ -79,7 +88,7 @@ fun LibraryScreen(
                         if (isAtBottom || layoutInfo.totalItemsCount == 0) {
                             switchTargetOffset = -60f
                             lastSwitchTime = now
-                            viewModel.playNext()
+                            viewModel.playNext(songs)
                         }
                     }
                 }
@@ -88,7 +97,6 @@ fun LibraryScreen(
         }
     }
 
-    // 切歌平滑回弹动画
     LaunchedEffect(switchTargetOffset) {
         if (switchTargetOffset != 0f) {
             delay(200)
@@ -96,11 +104,10 @@ fun LibraryScreen(
         }
     }
 
-    // 搜索栏关闭时清除搜索状态
     LaunchedEffect(isSearchActive) {
         if (!isSearchActive) {
             searchQuery = ""
-            viewModel.setSearchQuery("")
+            libraryViewModel.setSearchQuery("")
         }
     }
 
@@ -110,23 +117,47 @@ fun LibraryScreen(
         }
     }
 
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("音乐库") },
-                actions = {
-                    // 搜索按钮
+        containerColor = RainColors.BgDark,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // 自定义 Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "我的音乐",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = RainColors.TextPrimary
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // 搜索
                     IconButton(onClick = { isSearchActive = !isSearchActive }) {
                         Icon(
                             if (isSearchActive) Icons.Default.Close else Icons.Default.Search,
-                            contentDescription = "搜索"
+                            contentDescription = "搜索",
+                            tint = Color.White
                         )
                     }
-
                     // 排序菜单
                     Box {
                         IconButton(onClick = { showSortMenu = true }) {
-                            Icon(Icons.Default.Sort, contentDescription = "排序")
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "菜单",
+                                tint = Color.White
+                            )
                         }
                         DropdownMenu(
                             expanded = showSortMenu,
@@ -135,64 +166,65 @@ fun LibraryScreen(
                             SortOrder.entries.forEach { order ->
                                 DropdownMenuItem(
                                     text = {
-                                        Text(when (order) {
-                                            SortOrder.DATE_ADDED -> "添加时间"
-                                            SortOrder.TITLE -> "歌曲名"
-                                            SortOrder.ARTIST -> "艺术家"
-                                            SortOrder.ALBUM -> "专辑"
-                                        })
+                                        Text(
+                                            when (order) {
+                                                SortOrder.DATE_ADDED -> "添加时间"
+                                                SortOrder.TITLE -> "歌曲名"
+                                                SortOrder.ARTIST -> "艺术家"
+                                                SortOrder.ALBUM -> "专辑"
+                                            },
+                                            color = RainColors.TextPrimary
+                                        )
                                     },
                                     onClick = {
-                                        viewModel.setSortOrder(order)
+                                        libraryViewModel.setSortOrder(order)
                                         showSortMenu = false
                                     },
                                     leadingIcon = if (order == sortOrder) {
-                                        { Icon(Icons.Default.Check, contentDescription = null) }
+                                        { Icon(Icons.Default.Check, contentDescription = null, tint = RainColors.Accent) }
                                     } else null
                                 )
                             }
                         }
                     }
-
-                    // 导入按钮
-                    IconButton(onClick = onNavigateToImport) {
-                        Icon(Icons.Default.Add, contentDescription = "导入文件")
-                    }
                 }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
-            Column {
-                // 搜索栏
-                if (isSearchActive) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = {
-                            searchQuery = it
-                            viewModel.setSearchQuery(it)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        placeholder = { Text("搜索歌曲、艺术家、专辑") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = {
-                                    searchQuery = ""
-                                    viewModel.setSearchQuery("")
-                                }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "清除")
-                                }
+            }
+
+            // 搜索栏
+            if (isSearchActive) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        searchQuery = it
+                        libraryViewModel.setSearchQuery(it)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    placeholder = { Text("搜索歌曲、艺术家、专辑", color = RainColors.TextSecondary) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = RainColors.TextSecondary) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = {
+                                searchQuery = ""
+                                libraryViewModel.setSearchQuery("")
+                            }) {
+                                Icon(Icons.Default.Clear, contentDescription = "清除", tint = RainColors.TextSecondary)
                             }
-                        },
-                        singleLine = true
+                        }
+                    },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = RainColors.Accent,
+                        unfocusedBorderColor = RainColors.BgBorder,
+                        focusedTextColor = RainColors.TextPrimary,
+                        unfocusedTextColor = RainColors.TextPrimary,
+                        cursorColor = RainColors.Accent
                     )
-                }
+                )
+            }
 
-                if (songs.isEmpty() && !isSearchActive) {
+            if (songs.isEmpty() && !isSearchActive) {
                 // 空状态
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -203,27 +235,21 @@ fun LibraryScreen(
                         Icons.Default.LibraryMusic,
                         contentDescription = null,
                         modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.secondary
+                        tint = RainColors.TextSecondary
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("音乐库为空", style = MaterialTheme.typography.titleMedium)
+                    Text("音乐库为空", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = RainColors.TextPrimary)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "扫描设备音乐库或导入音频文件",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text("扫描设备音乐库或导入音频文件", fontSize = 14.sp, color = RainColors.TextSecondary)
                     Spacer(modifier = Modifier.height(24.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = { viewModel.scanMusic() }) {
+                        Button(
+                            onClick = { libraryViewModel.scanMusic() },
+                            colors = ButtonDefaults.buttonColors(containerColor = RainColors.Accent, contentColor = RainColors.BgDark)
+                        ) {
                             Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("扫描音乐库")
-                        }
-                        OutlinedButton(onClick = onNavigateToImport) {
-                            Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("导入文件")
                         }
                     }
                 }
@@ -235,8 +261,18 @@ fun LibraryScreen(
                         .fillMaxSize()
                         .nestedScroll(nestedScrollConnection)
                         .graphicsLayer { translationY = switchOffset },
-                    contentPadding = PaddingValues(bottom = if (currentSong != null) 80.dp else 0.dp)
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 110.dp)
                 ) {
+                    // 歌曲计数
+                    item {
+                        Text(
+                            "所有歌曲 · ${songs.size}首",
+                            fontSize = 14.sp,
+                            color = RainColors.TextSecondary,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+
                     items(songs, key = { it.id }) { song ->
                         SongRow(
                             song = song,
@@ -245,30 +281,34 @@ fun LibraryScreen(
                                 viewModel.setPlaylist(songs, songs.indexOf(song))
                                 onNavigateToPlayer()
                             },
-                            onDelete = { viewModel.deleteSong(song) }
+                            onDelete = { libraryViewModel.deleteSong(song) }
                         )
                     }
                 }
             }
-            } // Column end
 
             // 扫描中遮罩
             if (isScanning) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f)
+                    color = Color.Black.copy(alpha = 0.4f)
                 ) {
-                    Card(
-                        modifier = Modifier.align(Alignment.Center).padding(32.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Card(
+                            modifier = Modifier.padding(32.dp),
+                            colors = CardDefaults.cardColors(containerColor = RainColors.BgPill)
                         ) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("正在扫描音乐库...")
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                CircularProgressIndicator(color = RainColors.Accent)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text("正在扫描音乐库...", color = RainColors.TextPrimary)
+                            }
                         }
                     }
                 }
@@ -290,7 +330,8 @@ fun SongRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(8.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 封面
@@ -298,21 +339,18 @@ fun SongRow(
             AsyncImage(
                 model = song.albumArtUri,
                 contentDescription = null,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+                contentScale = ContentScale.Crop
             )
         } else {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Icon(
-                    Icons.Default.MusicNote,
-                    contentDescription = null,
-                    modifier = Modifier.padding(12.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(RainColors.CoverNavy1)
+            )
         }
 
         Spacer(modifier = Modifier.width(12.dp))
@@ -321,16 +359,16 @@ fun SongRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (isCurrentPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                fontWeight = if (isCurrentPlaying) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isCurrentPlaying) RainColors.Accent else RainColors.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${song.artist} · ${song.album}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = song.artist,
+                fontSize = 12.sp,
+                color = RainColors.TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -339,20 +377,46 @@ fun SongRow(
         // 时长
         Text(
             text = song.formattedDuration,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontSize = 13.sp,
+            color = RainColors.TextSecondary
         )
 
-        // 更多菜单
+        // 竖三点更多按钮
         Box {
-            IconButton(onClick = { showMenu = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "更多")
+            IconButton(onClick = { showMenu = true }, modifier = Modifier.size(24.dp)) {
+                // 竖三点图标
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(3.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(RainColors.DotGray)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(3.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(RainColors.DotGray)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(3.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(RainColors.DotGray)
+                    )
+                }
             }
-            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
                 DropdownMenuItem(
-                    text = { Text("删除") },
+                    text = { Text("删除", color = RainColors.TextPrimary) },
                     onClick = { onDelete(); showMenu = false },
-                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = RainColors.TextSecondary) }
                 )
             }
         }

@@ -1,4 +1,5 @@
 import { LyricLine } from '../model/SongModel'
+import { AppColors } from '../constants/Colors'
 
 /**
  * 歌词显示组件 - 同步滚动
@@ -7,7 +8,6 @@ import { LyricLine } from '../model/SongModel'
 export struct LyricsView {
   @Prop lyrics: LyricLine[] = []
   @Prop @Watch('onCurrentIndexChange') currentIndex: number = -1
-  @Prop stateVersion: number = 0
 
   private scroller: Scroller = new Scroller()
   private itemHeight: number = 44  // 每行高度（文字 + padding）
@@ -18,12 +18,12 @@ export struct LyricsView {
         Image($r('app.media.icon'))
           .width(40)
           .height(40)
-          .fillColor('#79747E')
+          .fillColor(AppColors.TextSecondary)
           .margin({ bottom: 8 })
 
         Text('暂无歌词')
           .fontSize(14)
-          .fontColor('#79747E')
+          .fontColor(AppColors.TextSecondary)
       }
       .width('100%')
       .height('100%')
@@ -38,7 +38,7 @@ export struct LyricsView {
             Text(line.text)
               .fontSize(index === this.currentIndex ? 18 : 14)
               .fontWeight(index === this.currentIndex ? FontWeight.Bold : FontWeight.Normal)
-              .fontColor(index === this.currentIndex ? '#6650A4' : '#79747E')
+              .fontColor(index === this.currentIndex ? AppColors.Accent : AppColors.TextSecondary)
               .textAlign(TextAlign.Center)
               .width('100%')
               .padding({ top: 6, bottom: 6 })

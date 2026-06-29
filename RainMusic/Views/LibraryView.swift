@@ -12,6 +12,7 @@ struct LibraryView: View {
     @State private var showPlayerSheet = false
     @State private var listDragOffsetY: CGFloat = 0
     @State private var lastSongSwitchTime: Date = .distantPast
+    @State private var isSearchActive = false
 
     private let audioManager = AudioPlayerManager.shared
     private let libraryManager = MusicLibraryManager.shared
@@ -44,54 +45,73 @@ struct LibraryView: View {
 
     var body: some View {
         ZStack {
-            NavigationStack {
-                ZStack {
-                    if filteredSongs.isEmpty {
-                        emptyStateView
-                    } else {
-                        songListView
-                    }
+            Color.rainBgDark
+                .ignoresSafeArea()
 
-                    // 底部迷你播放器
-                    VStack {
-                        Spacer()
-                        if audioManager.currentSong != nil {
-                            MiniPlayerView(showPlayerSheet: $showPlayerSheet)
+            VStack(spacing: 0) {
+                // 自定义 Header
+                HStack {
+                    Text("我的音乐")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(.rainTextPrimary)
+
+                    Spacer()
+
+                    // 搜索按钮
+                    Button {
+                        isSearchActive.toggle()
+                        if !isSearchActive {
+                            searchText = ""
                         }
-                    }
-                }
-                .navigationTitle("音乐库")
-                .searchable(text: $searchText, prompt: "搜索歌曲、艺术家、专辑")
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        sortMenu
+                    } label: {
+                        Image(systemName: isSearchActive ? "xmark" : "magnifyingglass")
+                            .font(.system(size: 18))
+                            .foregroundStyle(.white)
                     }
 
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
+                    // 排序菜单
+                    Menu {
+                        ForEach(SortOrder.allCases, id: \.self) { order in
                             Button {
-                                Task { await scanLibrary() }
+                                sortOrder = order
                             } label: {
-                                Label("扫描音乐库", systemImage: "magnifyingglass")
+                                if sortOrder == order {
+                                    Label(order.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(order.rawValue)
+                                }
                             }
-
-                            Button {
-                                showImportView = true
-                            } label: {
-                                Label("导入文件", systemImage: "square.and.arrow.down")
-                            }
-                        } label: {
-                            Image(systemName: "plus")
                         }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 18))
+                            .foregroundStyle(.white)
                     }
                 }
-                .sheet(isPresented: $showImportView) {
-                    ImportView()
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+
+                // 搜索栏
+                if isSearchActive {
+                    TextField("搜索歌曲、艺术家、专辑", text: $searchText)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.rainTextPrimary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.rainBgPill)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(.rainBgBorder, lineWidth: 1)
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
                 }
-                .overlay {
-                    if isScanning {
-                        scanningOverlay
-                    }
+
+                if filteredSongs.isEmpty {
+                    emptyStateView
+                } else {
+                    songListView
                 }
             }
 
@@ -101,42 +121,89 @@ struct LibraryView: View {
                     .transition(.move(edge: .bottom))
                     .zIndex(1)
             }
+
+            // 扫描遮罩
+            if isScanning {
+                ZStack {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(.rainAccent)
+
+                        Text("正在扫描音乐库...")
+                            .font(.headline)
+                            .foregroundStyle(.rainTextPrimary)
+                    }
+                    .padding(30)
+                    .background(.rainBgPill)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+            }
         }
-        .animation(.easeInOut(duration: 0.3), value: showPlayerSheet)
+        .onAppear {
+            audioManager.cachedSongs = filteredSongs
+        }
+        .onChange(of: searchText) { _, _ in
+            audioManager.cachedSongs = filteredSongs
+        }
+        .onChange(of: sortOrder) { _, _ in
+            audioManager.cachedSongs = filteredSongs
+        }
+        .onChange(of: songs) { _, _ in
+            audioManager.cachedSongs = filteredSongs
+        }
     }
 
     // MARK: - Subviews
 
     private var songListView: some View {
         List {
-            ForEach(filteredSongs) { song in
-                SongRowView(
-                    song: song,
-                    isCurrentPlaying: audioManager.currentSong?.id == song.id
-                )
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    audioManager.setPlaylist(filteredSongs, startIndex: filteredSongs.firstIndex(where: { $0.id == song.id }) ?? 0)
-                    showPlayerSheet = true
-                }
-                .contextMenu {
-                    Button {
-                        audioManager.play(song: song)
-                        showPlayerSheet = true
-                    } label: {
-                        Label("播放", systemImage: "play")
-                    }
+            // 歌曲计数
+            Section {
+                Text("所有歌曲 · \(filteredSongs.count)首")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.rainTextSecondary)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
 
-                    Button(role: .destructive) {
-                        deleteSong(song)
-                    } label: {
-                        Label("删除", systemImage: "trash")
+            // 歌曲列表
+            Section {
+                ForEach(filteredSongs) { song in
+                    SongRowView(
+                        song: song,
+                        isCurrentPlaying: audioManager.currentSong?.id == song.id
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        audioManager.setPlaylist(filteredSongs, startIndex: filteredSongs.firstIndex(where: { $0.id == song.id }) ?? 0)
+                        showPlayerSheet = true
+                    }
+                    .contextMenu {
+                        Button {
+                            audioManager.play(song: song)
+                            showPlayerSheet = true
+                        } label: {
+                            Label("播放", systemImage: "play")
+                        }
+
+                        Button(role: .destructive) {
+                            deleteSong(song)
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
                     }
                 }
             }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
-        .padding(.bottom, audioManager.currentSong != nil ? 70 : 0)
+        .scrollContentBackground(.hidden)
+        .padding(.bottom, 110)
         .offset(y: listDragOffsetY)
         .simultaneousGesture(
             DragGesture(minimumDistance: 20)
@@ -155,7 +222,6 @@ struct LibraryView: View {
                     }
 
                     if value.translation.height < -threshold {
-                        // 上滑 → 下一曲
                         lastSongSwitchTime = now
                         withAnimation(.easeInOut(duration: 0.25)) {
                             listDragOffsetY = -80
@@ -167,7 +233,6 @@ struct LibraryView: View {
                             }
                         }
                     } else if value.translation.height > threshold {
-                        // 下滑 → 上一曲
                         lastSongSwitchTime = now
                         withAnimation(.easeInOut(duration: 0.25)) {
                             listDragOffsetY = 80
@@ -179,7 +244,6 @@ struct LibraryView: View {
                             }
                         }
                     } else {
-                        // 未达阈值，平滑回弹
                         withAnimation(.easeInOut(duration: 0.3)) {
                             listDragOffsetY = 0
                         }
@@ -192,15 +256,16 @@ struct LibraryView: View {
         VStack(spacing: 20) {
             Image(systemName: "music.note.list")
                 .font(.system(size: 60))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.rainTextSecondary)
 
             Text("音乐库为空")
                 .font(.title2)
                 .fontWeight(.medium)
+                .foregroundStyle(.rainTextPrimary)
 
             Text("扫描设备音乐库或导入音频文件")
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.rainTextSecondary)
 
             HStack(spacing: 16) {
                 Button {
@@ -210,55 +275,10 @@ struct LibraryView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-
-                Button {
-                    showImportView = true
-                } label: {
-                    Label("导入文件", systemImage: "square.and.arrow.down")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
+                .tint(.rainAccent)
+                .foregroundStyle(.rainBgDark)
             }
             .padding(.horizontal, 40)
-        }
-    }
-
-    private var sortMenu: some View {
-        Menu {
-            ForEach(SortOrder.allCases, id: \.self) { order in
-                Button {
-                    sortOrder = order
-                } label: {
-                    if sortOrder == order {
-                        Label(order.rawValue, systemImage: "checkmark")
-                    } else {
-                        Text(order.rawValue)
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "arrow.up.arrow.down")
-        }
-    }
-
-    private var scanningOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-
-            VStack(spacing: 16) {
-                ProgressView()
-                    .scaleEffect(1.5)
-
-                Text("正在扫描音乐库...")
-                    .font(.headline)
-
-                ProgressView(value: libraryManager.scanProgress)
-                    .frame(width: 200)
-            }
-            .padding(30)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
 
@@ -266,7 +286,11 @@ struct LibraryView: View {
 
     private func scanLibrary() async {
         isScanning = true
-        await libraryManager.scanLibrary(modelContext: modelContext)
+        do {
+            try await libraryManager.scanLibrary(modelContext: modelContext)
+        } catch {
+            print("⚠️ 扫描异常: \(error.localizedDescription)")
+        }
         isScanning = false
         if let error = libraryManager.scanError {
             print("⚠️ 扫描结果: \(error)")

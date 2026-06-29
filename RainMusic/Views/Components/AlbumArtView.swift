@@ -11,23 +11,22 @@ struct AlbumArtView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                // 占位图：音符图标 + 渐变背景
+                // 海军蓝渐变占位图
                 ZStack {
                     LinearGradient(
-                        colors: [Color.purple.opacity(0.6), Color.blue.opacity(0.6)],
+                        colors: [.rainCoverNavy1, .rainCoverNavy2],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
 
                     Image(systemName: "music.note")
                         .font(.system(size: size * 0.3))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(.rainTextSecondary)
                 }
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: size * 0.06))
-        .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 8)
+        .clipShape(RoundedRectangle(cornerRadius: size * 0.07))
     }
 }
 

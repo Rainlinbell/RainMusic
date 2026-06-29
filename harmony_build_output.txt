@@ -1,0 +1,497 @@
+﻿.\hvigorw.bat : > hvigor [33mWARN: The project has not explicitly set the 'tar
+getSdkVersion' version at build-profile.json5. It is recommended to configure i
+t. Reference: https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ide
+-hvigor-build-profile-app#section45865492619[39m
+At line:1 char:85
++ ... \RainMusicHarmony; .\hvigorw.bat assembleHap --no-daemon 2>&1 | Out-F ...
++                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (> hvigor [33mW...5865492619[39m 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+> hvigor [32mUP-TO-DATE :entry:default@PreBuild...  [39m
+> hvigor [32mFinished :entry:default@CreateModuleInfo... after 1 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@GenerateMetadata...  [39m
+> hvigor [32mFinished :entry:default@ConfigureCmake... after 1 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@MergeProfile...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@CreateBuildProfile...  [39m
+> hvigor [32mFinished :entry:default@PreCheckSyscap... after 1 ms [39m
+> hvigor [32mFinished :entry:default@GeneratePkgContextInfo... after 6 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@GeneratePkgSdkInfo...  [39m
+> hvigor [32mFinished :entry:default@ProcessIntegratedHsp... after 1 ms [39m
+> hvigor [32mFinished :entry:default@BuildNativeWithCmake... after 1 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@MakePackInfo...  [39m
+> hvigor [32mFinished :entry:default@SyscapTransform... after 18 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessProfile...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessRouterMap...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessShareConfig...  [39m
+> hvigor [32mFinished :entry:default@ProcessStartupConfig... after 1 ms [39m
+> hvigor [32mFinished :entry:default@BuildNativeWithNinja... after 1 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessResource...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@GenerateLoaderJson...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@ProcessLibs...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@CompileResource...  [39m
+> hvigor [32mUP-TO-DATE :entry:default@DoNativeStrip...  [39m
+> hvigor [32mFinished :entry:default@BuildJS... after 2 ms [39m
+> hvigor [32mUP-TO-DATE :entry:default@CacheNativeLibs...  [39m
+> hvigor [91mERROR: Failed :entry:default@CompileArkTS... [39m
+> hvigor [33mWARN: 
+[33m1 WARN: [33m[33mArkTS:WARN: For details about ArkTS syntax errors, see F
+AQs[39m[39m
+[33m2 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry/
+src/main/ets/manager/AudioPlayerManager.ets:108:35
+ 'getMaxVolumeSync' has been deprecated.
+[39m[39m
+[33m3 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry/
+src/main/ets/manager/AudioPlayerManager.ets:109:35
+ 'getVolumeSync' has been deprecated.
+[39m[39m
+[33m4 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry/
+src/main/ets/manager/AudioPlayerManager.ets:124:35
+ 'getMaxVolumeSync' has been deprecated.
+[39m[39m
+[33m5 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry/
+src/main/ets/manager/AudioPlayerManager.ets:126:20
+ 'setVolume' has been deprecated.
+[39m[39m
+[33m6 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry/
+src/main/ets/manager/AudioPlayerManager.ets:126:20
+ To use this API, you need to apply for the permissions: ohos.permission.ACCESS
+_NOTIFICATION_POLICY
+[39m[39m
+[33m7 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry/
+src/main/ets/manager/AudioPlayerManager.ets:217:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m8 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry/
+src/main/ets/manager/AudioPlayerManager.ets:232:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m9 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry/
+src/main/ets/manager/AudioPlayerManager.ets:276:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m10 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/manager/AudioPlayerManager.ets:278:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m11 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/manager/AudioPlayerManager.ets:373:17
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m12 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/manager/AudioPlayerManager.ets:384:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m13 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/data/SongDatabase.ets:36:43
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m14 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/data/SongDatabase.ets:37:25
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m15 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/data/SongDatabase.ets:68:19
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m16 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:17:59
+ 'getContext' has been deprecated.
+[39m[39m
+[33m17 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:27:44
+ 'getContext' has been deprecated.
+[39m[39m
+[33m18 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:49:18
+ 'pushUrl' has been deprecated.
+[39m[39m
+[33m19 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:175:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m20 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:180:19
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m21 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:186:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m22 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:191:19
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m23 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:196:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m24 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:342:20
+ 'showToast' has been deprecated.
+[39m[39m
+[33m25 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:345:20
+ 'showToast' has been deprecated.
+[39m[39m
+[33m26 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:345:20
+ Function may throw exceptions. Special handling is required.
+[39m[39m
+[33m27 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/Index.ets:361:22
+ 'showToast' has been deprecated.
+[39m[39m
+[33m28 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:18:59
+ 'getContext' has been deprecated.
+[39m[39m
+[33m29 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:30:43
+ 'matchMediaSync' has been deprecated.
+[39m[39m
+[33m30 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:58:35
+ 'back' has been deprecated.
+[39m[39m
+[33m31 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:92:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m32 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:107:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m33 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:191:19
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m34 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:218:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m35 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:228:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m36 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:245:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m37 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:388:19
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m38 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:425:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m39 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:431:19
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m40 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:436:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m41 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:442:19
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m42 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:447:17
+ 'animateTo' has been deprecated.
+[39m[39m
+[33m43 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:469:23
+ 'getContext' has been deprecated.
+[39m[39m
+[33m44 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:490:38
+ 'PhotoViewPicker' has been deprecated.
+[39m[39m
+[33m45 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:491:40
+ 'select' has been deprecated.
+[39m[39m
+[33m46 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:492:26
+ 'PhotoViewMIMETypes' has been deprecated.
+[39m[39m
+[33m47 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:492:45
+ 'IMAGE_TYPE' has been deprecated.
+[39m[39m
+[33m48 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:495:18
+ 'photoUris' has been deprecated.
+[39m[39m
+[33m49 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:495:38
+ 'photoUris' has been deprecated.
+[39m[39m
+[33m50 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:496:36
+ 'photoUris' has been deprecated.
+[39m[39m
+[33m51 WARN: [33m[33mArkTS:WARN File: D:/Develop/rain/RainMusicHarmony/entry
+/src/main/ets/pages/PlayerPage.ets:497:25
+ 'getContext' has been deprecated.
+[39m[39m[39m
+> hvigor [91mERROR: ArkTS Compiler Error
+[31m1 ERROR: [31m10605008 ArkTS Compiler Error
+Error Message: Use explicit types instead of "any", "unknown" (arkts-no-any-unk
+nown) At File: D:/Develop/rain/RainMusicHarmony/entry/src/main/ets/manager/Audi
+oPlayerManager.ets:78:17
+[39m
+[39m
+[31m2 ERROR: [31m10605008 ArkTS Compiler Error
+Error Message: Use explicit types instead of "any", "unknown" (arkts-no-any-unk
+nown) At File: D:/Develop/rain/RainMusicHarmony/entry/src/main/ets/manager/Audi
+oPlayerManager.ets:79:17
+[39m
+[39m
+[31m3 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(type: "ringerModeChange", callback: Callback<AudioRingMode
+>): void', gave the following error.
+    Argument of type '"volumeChange"' is not assignable to parameter of type '"
+ringerModeChange"'.
+  Overload 2 of 2, '(type: "micStateChange", callback: Callback<MicStateChangeE
+vent>): void', gave the following error.
+    Argument of type '"volumeChange"' is not assignable to parameter of type '"
+micStateChange"'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/main/ets/
+manager/AudioPlayerManager.ets:77:25
+[39m
+[39m
+[31m4 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: 'audio' has no exported member named 'VolumeGroupEvent'. Did you
+ mean 'VolumeEvent'? At File: D:/Develop/rain/RainMusicHarmony/entry/src/main/e
+ts/manager/AudioPlayerManager.ets:77:60
+[39m
+[39m
+[31m5 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/components/BottomTabBar.ets:52:24
+[39m
+[39m
+[31m6 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/components/BottomTabBar.ets:59:24
+[39m
+[39m
+[31m7 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/Index.ets:107:22
+[39m
+[39m
+[31m8 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:57:22
+[39m
+[39m
+[31m9 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:169:78
+[39m
+[39m
+[31m10 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:170:88
+[39m
+[39m
+[31m11 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:174:32
+[39m
+[39m
+[31m12 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:180:87
+[39m
+[39m
+[31m13 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:182:43
+[39m
+[39m
+[31m14 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:340:28
+[39m
+[39m
+[31m15 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:346:28
+[39m
+[39m
+[31m16 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:353:30
+[39m
+[39m
+[31m17 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:365:28
+[39m
+[39m
+[31m18 ERROR: [31m10505001 ArkTS Compiler Error
+Error Message: No overload matches this call.
+  Overload 1 of 2, '(value: ResourceColor[]): SymbolGlyphAttribute', gave the f
+ollowing error.
+    Argument of type 'string' is not assignable to parameter of type 'ResourceC
+olor[]'.
+  Overload 2 of 2, '(value: (ResourceColor | ColorMetrics)[]): SymbolGlyphAttri
+bute', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(Resource
+Color | ColorMetrics)[]'. At File: D:/Develop/rain/RainMusicHarmony/entry/src/m
+ain/ets/pages/PlayerPage.ets:371:28
+[39m
+[39m
+[31m19 ERROR: [31m10903329 ArkTS Compiler Error
+Error Message: Unknown resource name 'music_note'. At File: D:/Develop/rain/Rai
+nMusicHarmony/entry/src/main/ets/pages/PlayerPage.ets:194:32
+[39m
+[39m
+[31m20 ERROR: [31m10903329 ArkTS Compiler Error
+Error Message: Unknown resource name 'music_note'. At File: D:/Develop/rain/Rai
+nMusicHarmony/entry/src/main/ets/pages/PlayerPage.ets:396:30
+[39m
+[39m
+[31m21 ERROR: [31m10903329 ArkTS Compiler Error
+Error Message: Unknown resource name 'ellipsis'. At File: D:/Develop/rain/RainM
+usicHarmony/entry/src/main/ets/pages/Index.ets:105:24
+[39m
+[39m
+[31m22 ERROR: [31m10903329 ArkTS Compiler Error
+Error Message: Unknown resource name 'tray_and_arrow_down'. At File: D:/Develop
+/rain/RainMusicHarmony/entry/src/main/ets/pages/Index.ets:219:22
+[39m
+[39m
+[31m23 ERROR: [31m10903329 ArkTS Compiler Error
+Error Message: Unknown resource name 'music_note'. At File: D:/Develop/rain/Rai
+nMusicHarmony/entry/src/main/ets/pages/Index.ets:290:22
+[39m
+[39m
+[31m24 ERROR: [31m10903329 ArkTS Compiler Error
+Error Message: Unknown resource name 'music_note'. At File: D:/Develop/rain/Rai
+nMusicHarmony/entry/src/main/ets/components/BottomTabBar.ets:76:26
+[39m
+[39m
+[31m25 ERROR: [31m10903329 ArkTS Compiler Error
+Error Message: Unknown resource name 'tray_and_arrow_down'. At File: D:/Develop
+/rain/RainMusicHarmony/entry/src/main/ets/components/BottomTabBar.ets:96:26
+[39m
+[39m
+[31mCOMPILE RESULT:FAIL {ERROR:26 WARN:51}[39m
+
+[31m* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --debug option to get more log output.
+[39m
+> hvigor [91mERROR: BUILD FAILED in 7 s 368 ms [39m

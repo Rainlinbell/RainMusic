@@ -48,7 +48,8 @@ class AudioPlayerManager(private val context: Context) {
     private val _systemVolume = MutableStateFlow(getSystemVolume())
     val systemVolume: StateFlow<Float> = _systemVolume
 
-    private val volumeHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
     private val volumeChecker = object : Runnable {
         override fun run() {
             val newVol = getSystemVolume()
@@ -57,7 +58,16 @@ class AudioPlayerManager(private val context: Context) {
                 // 硬件音量键变化时同步到 ExoPlayer
                 mediaController?.volume = newVol
             }
-            volumeHandler.postDelayed(this, 500)
+            handler.postDelayed(this, 500)
+        }
+    }
+
+    private val progressUpdater = object : Runnable {
+        override fun run() {
+            mediaController?.let {
+                _currentTime.value = it.currentPosition
+            }
+            handler.postDelayed(this, 500)
         }
     }
 
@@ -77,13 +87,19 @@ class AudioPlayerManager(private val context: Context) {
         }, MoreExecutors.directExecutor())
 
         // 启动系统音量监听（检测硬件音量键变化）
-        volumeHandler.post(volumeChecker)
+        handler.post(volumeChecker)
     }
 
     private fun setupPlayerListener() {
         mediaController?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _isPlaying.value = isPlaying
+                // 仅在播放时启动进度更新，暂停时停止
+                if (isPlaying) {
+                    handler.post(progressUpdater)
+                } else {
+                    handler.removeCallbacks(progressUpdater)
+                }
             }
 
             override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
@@ -99,16 +115,6 @@ class AudioPlayerManager(private val context: Context) {
                 }
             }
         })
-
-        // 进度更新
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(object : Runnable {
-            override fun run() {
-                mediaController?.let {
-                    _currentTime.value = it.currentPosition
-                }
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this, 500)
-            }
-        }, 500)
     }
 
     fun play(song: Song) {
@@ -251,7 +257,8 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun release() {
-        volumeHandler.removeCallbacks(volumeChecker)
+        handler.removeCallbacks(volumeChecker)
+        handler.removeCallbacks(progressUpdater)
         controllerFuture?.let {
             MediaController.releaseFuture(it)
         }

@@ -13,33 +13,25 @@ export class MusicScanner {
   }
 
   /**
-   * 扫描设备音乐库（递归扫描公共音乐目录）
+   * 扫描设备音乐库（仅扫描应用沙盒目录，无需额外权限）
    */
   async scanDeviceMusic(): Promise<Song[]> {
     const songs: Song[] = []
     const scannedPaths = new Set<string>()
 
     try {
-      // 扫描多个可能的音乐目录
-      const musicDirs: string[] = [
-        this.context.filesDir + '/music',
-        '/storage/media/common/Music',
-        '/storage/media/100/local/files/Music',
-        '/data/storage/el2/base/files/music'
-      ]
-
-      for (const dir of musicDirs) {
-        try {
-          if (!fileIo.accessSync(dir)) {
-            continue
-          }
-          this.scanDirectory(dir, songs, scannedPaths, 0)
-        } catch (e) {
-          // 目录不存在或无法访问，跳过
+      // 仅扫描应用沙盒内的音乐目录（无需 READ_MEDIA 权限）
+      const musicDir = this.context.filesDir + '/music'
+      try {
+        const exists = fileIo.accessSync(musicDir)
+        if (exists) {
+          this.scanDirectory(musicDir, songs, scannedPaths, 0)
         }
+      } catch (e) {
+        // 目录不存在，跳过
       }
     } catch (e) {
-      console.error('扫描音乐失败: ' + JSON.stringify(e))
+      console.error('扫描音乐失败: ' + String(e))
     }
 
     return songs
@@ -136,7 +128,7 @@ export class MusicScanner {
       song.lyricsPath = this.findLyricsFile(destPath)
       return song
     } catch (e) {
-      console.error('导入文件失败: ' + JSON.stringify(e))
+      console.error('导入文件失败: ' + String(e))
       return null
     }
   }

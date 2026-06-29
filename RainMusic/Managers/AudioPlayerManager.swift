@@ -35,12 +35,22 @@ final class AudioPlayerManager: NSObject {
     var playlist: [Song] = []
     var currentIndex: Int = -1
 
+    // 歌词
+    var lyrics: [LyricLine] = []
+    var currentLyricIndex: Int = -1
+    var showLyrics: Bool = false
+
+    // 缓存的歌曲列表
+    var cachedSongs: [Song] = []
+
     // MARK: - Private
     private var player: AVAudioPlayer?
     private var progressTimer: Timer?
     private var lastSongID: UUID?
+    private var lastLyricSongID: UUID?
     private var volumeSlider: UISlider?  // 隐藏的系统音量控制
     private var volumeObservation: NSKeyValueObservation?  // 监听系统音量变化
+    private var mpVolumeView: MPVolumeView?  // 保留引用以便清理
 
     // MARK: - Init
     private override init() {
@@ -58,6 +68,7 @@ final class AudioPlayerManager: NSObject {
         let volumeView = MPVolumeView(frame: .zero)
         volumeView.showsRouteButton = false
         volumeView.showsVolumeSlider = false
+        self.mpVolumeView = volumeView
         // 必须添加到视图层级才能工作
         if let window = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
@@ -140,6 +151,12 @@ final class AudioPlayerManager: NSObject {
     }
 
     func playNext() {
+        // 如果播放列表为空，自动填充
+        if playlist.isEmpty && !cachedSongs.isEmpty {
+            let idx = cachedSongs.firstIndex(where: { $0.id == currentSong?.id }) ?? 0
+            setPlaylist(cachedSongs, startIndex: idx)
+            return
+        }
         guard !playlist.isEmpty else { return }
 
         let nextIndex = getNextIndex()
@@ -150,6 +167,12 @@ final class AudioPlayerManager: NSObject {
     }
 
     func playPrevious() {
+        // 如果播放列表为空，自动填充
+        if playlist.isEmpty && !cachedSongs.isEmpty {
+            let idx = cachedSongs.firstIndex(where: { $0.id == currentSong?.id }) ?? 0
+            setPlaylist(cachedSongs, startIndex: idx)
+            return
+        }
         guard !playlist.isEmpty else { return }
 
         // 如果播放超过3秒，重头开始
@@ -208,6 +231,52 @@ final class AudioPlayerManager: NSObject {
         duration = 0
         stopProgressTimer()
         clearNowPlayingInfo()
+    }
+
+    func cleanup() {
+        stop()
+        mpVolumeView?.removeFromSuperview()
+        mpVolumeView = nil
+        volumeSlider = nil
+        volumeObservation = nil
+    }
+
+    // MARK: - Lyrics
+
+    func toggleLyrics() {
+        showLyrics.toggle()
+    }
+
+    func updateLyrics() {
+        guard let song = currentSong else { return }
+        if song.id != lastLyricSongID {
+            lastLyricSongID = song.id
+            lyrics = LyricsParser.loadLyrics(for: song) ?? []
+            currentLyricIndex = -1
+        }
+        if !lyrics.isEmpty {
+            let newIndex = LyricsParser.currentLineIndex(in: lyrics, at: currentTime)
+            if newIndex != currentLyricIndex {
+                currentLyricIndex = newIndex
+            }
+        }
+    }
+
+    // MARK: - Formatted Time
+
+    var currentTimeFormatted: String {
+        formatTime(currentTime)
+    }
+
+    var durationFormatted: String {
+        formatTime(duration)
+    }
+
+    private func formatTime(_ time: Double) -> String {
+        guard time.isFinite && !time.isNaN else { return "0:00" }
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 
     // MARK: - Queue Logic

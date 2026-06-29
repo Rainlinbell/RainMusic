@@ -14,6 +14,13 @@ export class Song {
   dateAdded: number = 0
   sourceType: string = 'scan'
 
+  get formattedDuration(): string {
+    const totalSeconds = Math.floor(this.duration / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+  }
+
   constructor(init?: SongInit) {
     if (init) {
       this.id = init.id ?? 0

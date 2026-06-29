@@ -6,41 +6,42 @@ struct SongRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // 封面缩略图
-            AlbumArtView(albumArtData: song.albumArtData, size: 44)
-                .frame(width: 44, height: 44)
+            // 封面 48x48 r=6
+            AlbumArtView(albumArtData: song.albumArtData, size: 48)
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
 
             // 歌曲信息
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(song.title)
-                    .font(.body)
-                    .fontWeight(isCurrentPlaying ? .semibold : .regular)
-                    .foregroundStyle(isCurrentPlaying ? Color.accentColor : .primary)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(isCurrentPlaying ? .rainAccent : .rainTextPrimary)
                     .lineLimit(1)
 
                 Text(song.artist)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.rainTextSecondary)
                     .lineLimit(1)
             }
 
             Spacer()
 
-            // 正在播放标识
-            if isCurrentPlaying {
-                Image(systemName: "waveform")
-                    .font(.caption)
-                    .foregroundStyle(Color.accentColor)
-                    .symbolEffect(.variableColor.iterative, isActive: true)
-            }
-
             // 时长
             Text(song.formattedDuration)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 13))
+                .foregroundStyle(.rainTextSecondary)
                 .monospacedDigit()
+
+            // 竖三点更多按钮
+            VStack(spacing: 3) {
+                Circle().fill(.rainDotGray).frame(width: 3, height: 3)
+                Circle().fill(.rainDotGray).frame(width: 3, height: 3)
+                Circle().fill(.rainDotGray).frame(width: 3, height: 3)
+            }
+            .frame(width: 24, height: 24)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
     }
 }
@@ -57,4 +58,7 @@ struct SongRowView: View {
             isCurrentPlaying: true
         )
     }
+    .listStyle(.plain)
+    .scrollContentBackground(.hidden)
+    .background(.rainBgDark)
 }

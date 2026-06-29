@@ -12,8 +12,6 @@ export class AudioPlayerManager {
   private static instance: AudioPlayerManager | null = null
   private player: media.AVPlayer | null = null
   private context: common.UIAbilityContext
-  private progressTimer: number = -1
-  private volumeCheckerTimer: number = -1
   private lastSystemVolume: number = 1.0
   private avSession: avSession.AVSession | null = null
 
@@ -59,7 +57,7 @@ export class AudioPlayerManager {
   }
 
   /**
-   * 初始化系统音量同步
+   * 初始化系统音量同步 —— 使用事件监听替代轮询
    */
   private initVolume() {
     try {
@@ -71,18 +69,28 @@ export class AudioPlayerManager {
         this.player.setVolume(sysVol)
       }
 
-      // 启动轮询检测硬件音量键变化
-      this.volumeCheckerTimer = setInterval(() => {
-        const newVol = this.getSystemVolume()
-        if (Math.abs(newVol - this.lastSystemVolume) > 0.01) {
-          this.lastSystemVolume = newVol
-          this.volume = newVol
-          if (this.player) {
-            this.player.setVolume(newVol)
+      // 使用事件监听检测硬件音量键变化
+      try {
+        const audioManager = audio.getAudioManager()
+        const volumeManager = audioManager.getVolumeManager()
+        volumeManager.on('streamVolumeChange', audio.StreamUsage.STREAM_USAGE_MUSIC, (event: audio.StreamVolumeEvent) => {
+          const maxVol: number = volumeManager.getMaxVolumeByStream(audio.StreamUsage.STREAM_USAGE_MUSIC)
+          const curVol: number = event.volume
+          if (maxVol > 0) {
+            const newVol = curVol / maxVol
+            if (Math.abs(newVol - this.lastSystemVolume) > 0.01) {
+              this.lastSystemVolume = newVol
+              this.volume = newVol
+              if (this.player) {
+                this.player.setVolume(newVol)
+              }
+              this.notifyChange()
+            }
           }
-          this.notifyChange()
-        }
-      }, 500)
+        })
+      } catch (e) {
+        console.error('注册音量事件监听失败: ' + JSON.stringify(e))
+      }
     } catch (e) {
       console.error('初始化音量失败: ' + JSON.stringify(e))
     }
@@ -371,11 +379,6 @@ export class AudioPlayerManager {
   }
 
   release() {
-    this.stopProgressTimer()
-    if (this.volumeCheckerTimer !== -1) {
-      clearInterval(this.volumeCheckerTimer)
-      this.volumeCheckerTimer = -1
-    }
     if (this.player) {
       this.player.release()
       this.player = null
@@ -383,24 +386,14 @@ export class AudioPlayerManager {
     AudioPlayerManager.instance = null
   }
 
-  // MARK: - 进度定时器
+  // MARK: - 进度定时器（已移除，仅依赖 timeUpdate 事件）
 
   private startProgressTimer() {
-    this.stopProgressTimer()
-    this.progressTimer = setInterval(() => {
-      if (this.player) {
-        this.currentTime = this.player.currentTime
-        this.currentLyricIndex = LyricsParser.findCurrentLineIndex(this.lyrics, this.currentTime)
-        this.notifyChange()
-      }
-    }, 500)
+    // 进度更新由 player.on('timeUpdate') 事件驱动，无需定时器
   }
 
   private stopProgressTimer() {
-    if (this.progressTimer !== -1) {
-      clearInterval(this.progressTimer)
-      this.progressTimer = -1
-    }
+    // 无需清理
   }
 
   private notifyChange() {

@@ -25,7 +25,16 @@ class MusicService : MediaSessionService() {
         createNotificationChannel()
 
         exoPlayer = ExoPlayer.Builder(this).build()
+
+        // 设置点击通知栏打开应用
+        val sessionActivity = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         mediaSession = MediaSession.Builder(this, exoPlayer!!)
+            .setSessionActivity(sessionActivity)
             .build()
     }
 

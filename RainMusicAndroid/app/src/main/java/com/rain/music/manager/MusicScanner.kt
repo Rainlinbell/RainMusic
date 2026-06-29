@@ -2,9 +2,11 @@ package com.rain.music.manager
 
 import android.content.ContentUris
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.core.content.ContextCompat
 import com.rain.music.data.db.SongDao
 import com.rain.music.data.model.Song
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +40,17 @@ class MusicScanner(private val context: Context, private val songDao: SongDao) {
     suspend fun scanDeviceMusic(): Int = withContext(Dispatchers.IO) {
         val songs = mutableListOf<Song>()
         try {
+            // 扫描前二次校验权限
+            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                android.Manifest.permission.READ_MEDIA_AUDIO
+            } else {
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                return@withContext 0
+            }
+
             val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
             } else {
@@ -107,8 +120,8 @@ class MusicScanner(private val context: Context, private val songDao: SongDao) {
             if (songs.isNotEmpty()) {
                 songDao.insertAll(songs)
             }
-        } catch (e: Exception) {
-            // 顶层捕获：权限拒绝、数据库错误等
+        } catch (e: Throwable) {
+            // 顶层捕获：权限拒绝、数据库错误、厂商 ROM 非标准异常等
             e.printStackTrace()
         }
 

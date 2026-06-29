@@ -25,7 +25,7 @@ final class MusicLibraryManager {
 
     // MARK: - Scan iPod Library
 
-    func scanLibrary(modelContext: ModelContext) async {
+    func scanLibrary(modelContext: ModelContext) async throws {
         await MainActor.run {
             isScanning = true
             scanProgress = 0
@@ -33,12 +33,30 @@ final class MusicLibraryManager {
         }
 
         do {
-            let authorized = await requestMediaLibraryAccess()
-            guard authorized else {
-                print("⚠️ 未获得媒体库访问权限")
+            // 前置检查授权状态
+            let status = MPMediaLibrary.authorizationStatus()
+            switch status {
+            case .notDetermined:
+                let authorized = await requestMediaLibraryAccess()
+                guard authorized else {
+                    await MainActor.run {
+                        isScanning = false
+                        scanError = "未获得媒体库访问权限"
+                    }
+                    return
+                }
+            case .denied, .restricted:
                 await MainActor.run {
                     isScanning = false
-                    scanError = "未获得媒体库访问权限"
+                    scanError = "媒体库访问权限被拒绝，请在系统设置中授权"
+                }
+                return
+            case .authorized:
+                break
+            @unknown default:
+                await MainActor.run {
+                    isScanning = false
+                    scanError = "未知的权限状态"
                 }
                 return
             }
@@ -63,6 +81,13 @@ final class MusicLibraryManager {
             let musicDir = getMusicDirectory()
             let lyricsDir = getLyricsDirectory()
 
+            // 批量加载已有 ID，避免 N+1 查询
+            let existingDescriptor = FetchDescriptor<Song>(
+                predicate: #Predicate { $0.mediaLibraryPersistentID != "" }
+            )
+            let existingSongs = try? modelContext.fetch(existingDescriptor)
+            let existingIDs = Set(existingSongs?.map(\.mediaLibraryPersistentID) ?? [])
+
             for (index, item) in items.enumerated() {
                 do {
                     // 跳过 DRM 保护的歌曲
@@ -73,11 +98,8 @@ final class MusicLibraryManager {
                     let persistentIDRaw = item.value(forProperty: MPMediaItemPropertyPersistentID) as? NSNumber ?? NSNumber(value: 0)
                     let persistentID = persistentIDRaw.stringValue
 
-                    // 检查是否已存在
-                    let descriptor = FetchDescriptor<Song>(
-                        predicate: #Predicate { $0.mediaLibraryPersistentID == persistentID }
-                    )
-                    if let _ = try? modelContext.fetch(descriptor) {
+                    // 用 Set 快速查重
+                    if existingIDs.contains(persistentID) {
                         await MainActor.run {
                             scanProgress = Double(index + 1) / Double(total)
                         }
@@ -101,7 +123,7 @@ final class MusicLibraryManager {
                     var albumArtData: Data? = nil
                     if let artwork = item.value(forProperty: MPMediaItemPropertyArtwork) as? MPMediaItemArtwork {
                         let image = artwork.image(at: CGSize(width: 512, height: 512))
-                        albumArtData = image?.pngData()
+                        albumArtData = image?.jpegData(compressionQuality: 0.85)
                     }
 
                     // 查找歌词文件

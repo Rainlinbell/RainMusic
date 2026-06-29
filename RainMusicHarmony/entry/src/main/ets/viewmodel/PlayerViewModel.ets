@@ -2,10 +2,12 @@ import { Song, SortOrder, LyricLine, ShuffleMode, RepeatMode } from '../model/So
 import { AudioPlayerManager } from '../manager/AudioPlayerManager'
 import { MusicScanner } from '../manager/MusicScanner'
 import { LyricsParser } from '../manager/LyricsParser'
+import { SongDatabase } from '../data/SongDatabase'
 import { common } from '@kit.AbilityKit'
 
 /**
  * 视图模型 - @Observed 实现响应式数据绑定
+ * 所有播放状态存储为直接属性，audioManager 回调中直接更新这些属性以触发 UI 刷新
  */
 @Observed
 export class PlayerViewModel {
@@ -16,38 +18,60 @@ export class PlayerViewModel {
   isScanning: boolean = false
   scanResult: string = ''
 
-  // 播放状态
-  private audioManager: AudioPlayerManager
-  private musicScanner: MusicScanner
-
-  get currentSong(): Song | null { return this.audioManager.currentSong }
-  get isPlaying(): boolean { return this.audioManager.isPlaying }
-  get currentTime(): number { return this.audioManager.currentTime }
-  get duration(): number { return this.audioManager.duration }
-  get volume(): number { return this.audioManager.volume }
-  set volume(v: number) { this.audioManager.setVolume(v) }
-  get shuffleMode(): ShuffleMode { return this.audioManager.shuffleMode }
-  get repeatMode(): RepeatMode { return this.audioManager.repeatMode }
-  get lyrics(): LyricLine[] { return this.audioManager.lyrics }
-  get currentLyricIndex(): number { return this.audioManager.currentLyricIndex }
-
-  // 状态版本号 - 每次状态变化递增，触发 UI 刷新
-  stateVersion: number = 0
+  // 播放状态（直接存储，非 getter 代理）
+  currentSong: Song | null = null
+  isPlaying: boolean = false
+  currentTime: number = 0
+  duration: number = 0
+  shuffleMode: ShuffleMode = ShuffleMode.OFF
+  repeatMode: RepeatMode = RepeatMode.OFF
+  lyrics: LyricLine[] = []
+  currentLyricIndex: number = -1
 
   // 显示状态
   showLyrics: boolean = false
 
+  // 依赖
+  private audioManager: AudioPlayerManager
+  private musicScanner: MusicScanner
+  private songDb: SongDatabase
+
   constructor(context: common.UIAbilityContext) {
     this.audioManager = AudioPlayerManager.getInstance(context)
     this.musicScanner = new MusicScanner(context)
+    this.songDb = new SongDatabase()
 
-    // 监听状态变化
+    // 异步加载持久化歌曲数据（不阻塞构造）
+    this.songDb.init(context).then(async () => {
+      this.songs = await this.songDb.loadAllSongs()
+    })
+
+    // 初始化播放状态
+    this.syncFromAudioManager()
+
+    // 监听状态变化 —— 直接更新属性触发响应式刷新
     this.audioManager.onStateChange = () => {
-      // 递增版本号触发所有 @Prop 更新
-      this.stateVersion++
-      this.songs = [...this.songs]
+      this.syncFromAudioManager()
     }
   }
+
+  /**
+   * 从 audioManager 同步播放状态到直接属性
+   */
+  private syncFromAudioManager() {
+    this.currentSong = this.audioManager.currentSong
+    this.isPlaying = this.audioManager.isPlaying
+    this.currentTime = this.audioManager.currentTime
+    this.duration = this.audioManager.duration
+    this.shuffleMode = this.audioManager.shuffleMode
+    this.repeatMode = this.audioManager.repeatMode
+    this.lyrics = this.audioManager.lyrics
+    this.currentLyricIndex = this.audioManager.currentLyricIndex
+  }
+
+  // 音量属性
+  get volume(): number { return this.audioManager.volume }
+  set volume(v: number) { this.audioManager.setVolume(v) }
 
   // 过滤后的歌曲列表
   get filteredSongs(): Song[] {
@@ -75,8 +99,23 @@ export class PlayerViewModel {
   // 播放控制
   play(song: Song) { this.audioManager.play(song) }
   togglePlayPause() { this.audioManager.togglePlayPause() }
-  playNext() { this.audioManager.playNext() }
-  playPrevious() { this.audioManager.playPrevious() }
+  playNext() {
+    // 如果播放列表为空，自动用歌曲列表填充
+    if (this.audioManager.playlist.length === 0 && this.songs.length > 0) {
+      const idx = this.songs.findIndex(s => s.id === this.currentSong?.id)
+      this.audioManager.setPlaylist(this.songs, idx >= 0 ? idx : 0)
+      return
+    }
+    this.audioManager.playNext()
+  }
+  playPrevious() {
+    if (this.audioManager.playlist.length === 0 && this.songs.length > 0) {
+      const idx = this.songs.findIndex(s => s.id === this.currentSong?.id)
+      this.audioManager.setPlaylist(this.songs, idx >= 0 ? idx : 0)
+      return
+    }
+    this.audioManager.playPrevious()
+  }
   seekTo(position: number) { this.audioManager.seekTo(position) }
   setVolume(vol: number) { this.audioManager.setVolume(vol) }
   setPlaylist(songs: Song[], startIndex: number = 0) { this.audioManager.setPlaylist(songs, startIndex) }
@@ -97,11 +136,13 @@ export class PlayerViewModel {
       const existingUris = new Set(this.songs.map(s => s.fileUri))
       const newSongs = result.filter(s => !existingUris.has(s.fileUri))
       this.songs = [...this.songs, ...newSongs]
+      // 持久化新增歌曲
+      await this.songDb.batchInsertSongs(newSongs)
       this.scanResult = newSongs.length > 0
         ? `扫描完成，新增 ${newSongs.length} 首歌曲（跳过 ${result.length - newSongs.length} 首重复）`
         : '未找到新歌曲'
     } catch (e) {
-      this.scanResult = '扫描失败: ' + JSON.stringify(e)
+      this.scanResult = '扫描失败: ' + String(e)
     } finally {
       this.isScanning = false
     }
@@ -115,6 +156,8 @@ export class PlayerViewModel {
       const exists = this.songs.some(s => s.fileUri === song.fileUri)
       if (!exists) {
         this.songs = [...this.songs, song]
+        // 持久化导入的歌曲
+        await this.songDb.insertSong(song)
         this.scanResult = `导入成功: ${song.title}`
       } else {
         this.scanResult = `歌曲已存在: ${song.title}`
@@ -123,8 +166,9 @@ export class PlayerViewModel {
   }
 
   // 删除
-  deleteSong(song: Song) {
+  async deleteSong(song: Song) {
     this.songs = this.songs.filter(s => s.id !== song.id)
+    await this.songDb.deleteSongById(song.id)
   }
 
   // 更新封面
@@ -132,7 +176,7 @@ export class PlayerViewModel {
     const song = this.currentSong
     if (song) {
       song.albumArtUri = uri
-      this.stateVersion++
+      this.syncFromAudioManager()
     }
   }
 }
