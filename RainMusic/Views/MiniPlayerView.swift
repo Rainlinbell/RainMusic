@@ -3,22 +3,22 @@ import SwiftUI
 struct MiniPlayerView: View {
     @Binding var showPlayerSheet: Bool
     private let audioManager = AudioPlayerManager.shared
+    @State private var isPressed = false
 
     var body: some View {
         if let song = audioManager.currentSong {
             VStack(spacing: 0) {
-                // 进度条（渐变）— 使用 TimelineView 驱动刷新
                 TimelineView(.periodic(from: .now, by: 0.5)) { _ in
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 1.5)
-                                .fill(Color.secondary.opacity(0.15))
-                                .frame(height: 3)
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.rainBgBorder.opacity(0.6))
+                                .frame(height: 4)
 
-                            RoundedRectangle(cornerRadius: 1.5)
+                            RoundedRectangle(cornerRadius: 2)
                                 .fill(
                                     LinearGradient(
-                                        colors: [.rainAccent, .rainAccent.opacity(0.6)],
+                                        colors: [.rainAccent, .rainAccent.opacity(0.7)],
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
@@ -29,69 +29,92 @@ struct MiniPlayerView: View {
                                         ? audioManager.currentTime / audioManager.duration
                                         : 0
                                     ),
-                                    height: 3
+                                    height: 4
                                 )
                         }
                     }
-                    .frame(height: 3)
+                    .frame(height: 4)
                 }
+                .padding(.top, 2)
 
-                HStack(spacing: 12) {
-                    // 封面
-                    AlbumArtView(albumArtData: song.albumArtData, size: 50)
-                        .frame(width: 50, height: 50)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                HStack(spacing: 14) {
+                    ZStack {
+                        AlbumArtView(albumArtData: song.albumArtData, size: 48)
+                            .frame(width: 48, height: 48)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
 
-                    // 歌曲信息
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(song.title)
-                            .font(.subheadline)
-                            .fontWeight(.bold)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.rainTextPrimary)
                             .lineLimit(1)
 
                         Text(song.artist)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.rainTextSecondary)
                             .lineLimit(1)
                     }
 
                     Spacer()
 
-                    // 播放/暂停按钮（主色圆形 + 阴影）
                     Button {
+                        withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                            isPressed = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                                isPressed = false
+                            }
+                        }
                         audioManager.togglePlayPause()
                     } label: {
                         Image(systemName: audioManager.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(.rainBgDark)
-                            .frame(width: 42, height: 42)
-                            .background(.rainAccent)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                LinearGradient(
+                                    colors: [.rainAccent, .rainAccent.opacity(0.85)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .clipShape(Circle())
-                            .shadow(color: .rainAccent.opacity(0.3), radius: 6, y: 2)
+                            .shadow(color: .rainAccent.opacity(0.4), radius: 10, y: 4)
                     }
+                    .scaleEffect(isPressed ? 0.92 : 1.0)
 
-                    // 下一曲按钮
                     Button {
                         audioManager.playNext()
                     } label: {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 15))
-                            .foregroundStyle(.secondary)
+                        Image(systemName: "forward.end.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(.rainTextSecondary)
+                            .frame(width: 36, height: 36)
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
             }
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-            .padding(.horizontal, 8)
-            .padding(.bottom, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .padding(.horizontal, 10)
+            .padding(.bottom, 6)
             .onTapGesture {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     showPlayerSheet = true
                 }
             }
-            .shadow(color: .black.opacity(0.06), radius: 16, y: -4)
+            .shadow(color: .black.opacity(0.12), radius: 20, y: -6)
         }
     }
 }

@@ -12,7 +12,7 @@ export class AppColors {
 
   // 强调色
   static readonly Accent: string = '#4FC3F7'      // 主强调色
-  static readonly AccentDark: string = '#0288D1'  // 深强调色
+  static readonly AccentDark: string = '#29B6F6'  // 深强调色
 
   // 文字色
   static readonly TextPrimary: string = '#E0E8F0'   // 主文字
